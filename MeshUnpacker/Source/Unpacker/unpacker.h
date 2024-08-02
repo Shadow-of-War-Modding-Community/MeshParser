@@ -372,37 +372,42 @@ exit(-1)
 		};
 	}
 
-	class MeshLoader {
-	public:
+	struct Mesh {
 		enum class VertexType {
 			Vertex16,
 			Vertex24,
 			Unknown
 		};
 
-	private:
-		bool load_once = false;
-		std::shared_ptr<INTERNAL::Header> header = std::make_shared<INTERNAL::Header>();
-		std::shared_ptr<INTERNAL::MeshDescSection> meshDescSection = std::make_shared<INTERNAL::MeshDescSection>();
-		std::shared_ptr<INTERNAL::MeshInfoSection> meshInfoSection = std::make_shared<INTERNAL::MeshInfoSection>();
-		std::shared_ptr<INTERNAL::MeshDataSection> meshDataSection = std::make_shared<INTERNAL::MeshDataSection>();
-		
-		std::shared_ptr<std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex16>>> meshBuffersV16 = 
-			std::make_shared<std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex16>>>();
-		std::shared_ptr<std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex24>>> meshBuffersV24 =
-			std::make_shared<std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex24>>>();
+		INTERNAL::Header header{};
+		INTERNAL::MeshDescSection meshDescSection{};
+		INTERNAL::MeshInfoSection meshInfoSection{};
+		INTERNAL::MeshDataSection meshDataSection{};
+
+		std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex16>> meshBuffersV16{};
+		std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex24>> meshBuffersV24{};
 
 		std::vector<VertexType> vertexTypes;
+	};
+
+	class MeshLoader {
+	public:
+
+
+	private:
+		bool load_once = false;
 		
-		VertexType determine_vertexType(byte* vertDataBuffer) {
+		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+		
+		Mesh::VertexType determine_vertexType(byte* vertDataBuffer) {
 			using namespace INTERNAL::Types;
 			Vertex16* v16 = (Vertex16*)vertDataBuffer;
 			if (v16->checkVert == 15360)
-				return VertexType::Vertex16;
+				return Mesh::VertexType::Vertex16;
 			Vertex24* v24 = (Vertex24*)vertDataBuffer;
 			if (v24->checkVert == 1.0f)
-				return VertexType::Vertex24;
-			return VertexType::Unknown;
+				return Mesh::VertexType::Vertex24;
+			return Mesh::VertexType::Unknown;
 		}
 
 	public:
@@ -423,53 +428,35 @@ exit(-1)
 
 			std::ifstream file(file_name, std::ios::binary);
 
-			file.read((char*)header.get(), sizeof(Header));
+			file.read((char*)&mesh->header, sizeof(Header));
 
-			expect(header->magic_u, 0x48534D4Du);
-			expect(header->version, 0x11u);
+			expect(mesh->header.magic_u, 0x48534D4Du);
+			expect(mesh->header.version, 0x11u);
 
-			meshDescSection->populate(file);
-			meshInfoSection->populate(file);
-			meshDataSection->populate(file, *meshDescSection);
+			mesh->meshDescSection.populate(file);
+			mesh->meshInfoSection.populate(file);
+			mesh->meshDataSection.populate(file, mesh->meshDescSection);
 
-			for (int mesh = 0; mesh < meshInfoSection->meshCount; ++mesh) {
-				VertexType vt = determine_vertexType(meshDataSection->vertDataSections[mesh]);
-				if (vt == VertexType::Vertex16) {
-					meshBuffersV16->push_back(INTERNAL::MeshBuffer<INTERNAL::Types::Vertex16>{});
-					meshBuffersV16->at(mesh).populate(*meshInfoSection, *meshDataSection, mesh);
+			for (int meshCounter = 0; meshCounter < mesh->meshInfoSection.meshCount; ++meshCounter) {
+				Mesh::VertexType vt = determine_vertexType(mesh->meshDataSection.vertDataSections[meshCounter]);
+				if (vt == Mesh::VertexType::Vertex16) {
+					mesh->meshBuffersV16.push_back(INTERNAL::MeshBuffer<INTERNAL::Types::Vertex16>{});
+					mesh->meshBuffersV16[meshCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, meshCounter);
 				}
-				else if (vt == VertexType::Vertex24) {
-					meshBuffersV24->push_back(INTERNAL::MeshBuffer<INTERNAL::Types::Vertex24>{});
-					meshBuffersV24->at(mesh).populate(*meshInfoSection, *meshDataSection, mesh);
+				else if (vt == Mesh::VertexType::Vertex24) {
+					mesh->meshBuffersV24.push_back(INTERNAL::MeshBuffer<INTERNAL::Types::Vertex24>{});
+					mesh->meshBuffersV24[meshCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, meshCounter);
 				}
 				else {
 					error("MeshLoader can't deduce Vertex type!");
 				}
-				vertexTypes.push_back(vt);
+				mesh->vertexTypes.push_back(vt);
 			}
 		}
 
-		std::optional<VertexType> getVertexType(int meshNumber) {
-			if (meshNumber > vertexTypes.size() - 1 || meshNumber < 0)
-				return std::nullopt;
-			return vertexTypes[meshNumber];
+		std::shared_ptr<Mesh> getMesh() {
+			return mesh;
 		}
 
-		bool getMeshBuffers(std::shared_ptr<std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex16>>> meshBuffersV16,
-			std::shared_ptr<std::vector<INTERNAL::MeshBuffer<INTERNAL::Types::Vertex24>>> meshBuffersV24) {
-			if (!load_once) return false;
-			meshBuffersV16 = this->meshBuffersV16;
-			meshBuffersV24 = this->meshBuffersV24;
-			return true;
-		}
-
-		bool getSections(std::shared_ptr<INTERNAL::MeshDescSection> meshDescSection, 
-			std::shared_ptr<INTERNAL::MeshInfoSection> meshInfoSection, std::shared_ptr<INTERNAL::MeshDataSection> meshDataSection) {
-			if (!load_once) return false;
-			meshDescSection = this->meshDescSection;
-			meshInfoSection = this->meshInfoSection;
-			meshDataSection = this->meshDataSection;
-			return true;
-		}
 	};
 }
