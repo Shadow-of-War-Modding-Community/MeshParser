@@ -14,6 +14,12 @@ using half_float::half;
 #define error(msg) MessageBoxA(NULL, msg, "ERROR", MB_ICONERROR);\
 exit(-1)
 
+void expect(ulong var, ulong val) {
+	if (var != val) {
+		error(("Variable contains unexpected value.\nExpected: " + std::to_string(val) + "\nFound: " + std::to_string(var)).c_str());
+	}
+}
+
 ulong sub_file_offset = 0;
 template<typename T>
 T read_virtual_file(byte* sub_file) {
@@ -57,7 +63,10 @@ struct Header {
 	ulong meshDataSectionSize;
 };
 
-struct MeshDescSection {
+class MeshDescSection {
+	bool populated = false;
+
+public:
 	ulong sectionID; // 0xEBAEC3FA
 	ulong matIndexCount;
 	ulong sectionDataCount;
@@ -77,6 +86,11 @@ struct MeshDescSection {
 
 
 	void populate(std::ifstream& mesh) {
+		if (populated) {
+			error("Can't populate MeshDescSection more than one time!");
+		}
+		populated = true;
+
 		mesh.read((char*)this, sizeof(ulong) * 3); // parse first three attributes
 		
 		unkMatIndices = new long[matIndexCount];
@@ -101,7 +115,10 @@ struct MeshDescSection {
 	}
 };
 
-struct MeshInfoSection {
+class MeshInfoSection {
+	bool populated = false;
+
+public:
 	struct MatAssignment {
 		long model;
 		long mesh;
@@ -139,7 +156,10 @@ struct MeshInfoSection {
 		UVFormat uvFormat;
 	};
 
-	struct ModelLodSettings {
+	class ModelLodSettings {
+		bool populated = false;
+
+	public:
 		ulong unknownCount;
 		byte* unknownByte1 = nullptr;
 		byte* unknownByte2 = nullptr;
@@ -147,6 +167,10 @@ struct MeshInfoSection {
 		byte* unknownByte4 = nullptr;
 
 		void populate(std::ifstream& mesh) {
+			if (populated) {
+				error("Can't populate ModelLodSettings more than one time!");
+			}
+			populated = true;
 			mesh.read((char*)&unknownCount, sizeof(ulong));
 
 			unknownByte1 = new byte[unknownCount];
@@ -215,6 +239,11 @@ struct MeshInfoSection {
 	}
 
 	void populate(std::ifstream& mesh) {
+		if (populated) {
+			error("Can't populate MeshInfoSection more than one time!");
+		}
+		populated = true;
+
 		mesh.read((char*)this, 72); // parse until modelIDs array
 
 		modelIDs = new ulong[modelCount];
@@ -258,13 +287,15 @@ struct MeshInfoSection {
 	}
 };
 
-struct MeshDataSection {
+class MeshDataSection {
+	bool populated = false;
 
+public:
 	ulong sectionID; // 0x95DBDB69
 	
 	std::vector<byte*> vertDataSections;
 	std::vector<byte*> faceDataSections;
-	std::vector<byte*> boneDataSections;
+	std::vector<byte*> skinDataSections;
 
 	MeshDataSection() = default;
 
@@ -273,6 +304,11 @@ struct MeshDataSection {
 	}
 
 	void populate(std::ifstream& mesh, MeshDescSection& meshDescSection) {
+		if (populated) {
+			error("Can't populate MeshDataSection more than one time!");
+		}
+		populated = true;
+
 		read_ulong(sectionID, mesh);
 
 		for (int i = 0; i < meshDescSection.sectionDataCount; ++i) {
@@ -290,7 +326,7 @@ struct MeshDataSection {
 		for (int i = 0; i < meshDescSection.sectionDataCount; ++i) {
 			byte* tmp_buf = new byte[meshDescSection.skinSectionSizes[i]];
 			mesh.read((char*)tmp_buf, meshDescSection.skinSectionSizes[i]);
-			boneDataSections.push_back(tmp_buf);
+			skinDataSections.push_back(tmp_buf);
 		}
 	}
 
@@ -299,18 +335,21 @@ struct MeshDataSection {
 			delete[] iter;
 		for (auto& iter : faceDataSections)
 			delete[] iter;
-		for (auto& iter : boneDataSections)
+		for (auto& iter : skinDataSections)
 			delete[] iter;
 	}
 };
 
 template<typename VERTEX> 
 	requires std::is_same_v<VERTEX, Types::Vertex16> || std::is_same_v<VERTEX, Types::Vertex24>
-struct MeshBuffer {
+class MeshBuffer {
+	bool populated = false;
+
+public:
 	std::vector<std::vector<VERTEX>> subMeshesVertexContainer;
 	std::vector<std::vector<byte>> subMeshesUVContainer;
 	std::vector<std::vector<Types::Face>> subMeshesFaceContainer;
-	std::vector<std::vector<byte>> subMeshSkinContainer;
+	std::vector<std::vector<byte>> subMeshesSkinContainer;
 
 	static bool checkVert(VERTEX vertex) {
 		if constexpr (std::is_same_v<VERTEX, Types::Vertex16>) {
@@ -328,6 +367,11 @@ struct MeshBuffer {
 	}
 
 	void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int meshNumber) {
+		if (populated) {
+			error("Can't populate MeshBuffer more than one time!");
+		}
+		populated = true;
+
 		for (int subMesh = 0; subMesh < meshInfoSection.meshInfos[meshNumber].subMeshCount; ++subMesh) {
 			VERTEX* v = (VERTEX*)meshDataSection.vertDataSections[meshNumber];
 			subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
@@ -344,6 +388,11 @@ struct MeshBuffer {
 				subMeshesFaceContainer[subMesh].push_back(f[faceCounter]);
 			}
 			// Skin loop here...
+			byte* s = meshDataSection.skinDataSections[meshNumber];
+			subMeshesSkinContainer.push_back(std::vector<byte>{});
+			for (int skinCounter = 0; skinCounter < meshInfoSection.subMeshInfos[subMesh].skinCount; ++skinCounter) {
+				subMeshesSkinContainer[subMesh].push_back(s[skinCounter]);
+			}
 		}
 	}
 
