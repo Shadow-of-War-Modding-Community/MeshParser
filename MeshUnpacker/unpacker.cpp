@@ -14,19 +14,12 @@ using half_float::half;
 #define error(msg) MessageBoxA(NULL, msg, "ERROR", MB_ICONERROR);\
 exit(-1)
 
-void expect(ulong var, ulong val) {
+template<typename T> 
+	requires std::is_integral_v<T>
+void expect(T var, T val) {
 	if (var != val) {
 		error(("Variable contains unexpected value.\nExpected: " + std::to_string(val) + "\nFound: " + std::to_string(var)).c_str());
 	}
-}
-
-ulong sub_file_offset = 0;
-template<typename T>
-T read_virtual_file(byte* sub_file) {
-	T tmp{};
-	tmp = *(T*)(sub_file + sub_file_offset);
-	sub_file_offset += sizeof(T);
-	return tmp;
 }
 
 namespace Types {
@@ -55,7 +48,10 @@ namespace Types {
 }
 
 struct Header {
-	char magic[4]; // or ulong
+	union {
+		char magic_c[4]; // MMSH
+		ulong magic_u; // 0x48534D4D
+	};
 	ulong version;
 
 	ulong meshDescSectionSize;
@@ -63,10 +59,7 @@ struct Header {
 	ulong meshDataSectionSize;
 };
 
-class MeshDescSection {
-	bool populated = false;
-
-public:
+struct MeshDescSection {
 	ulong sectionID; // 0xEBAEC3FA
 	ulong matIndexCount;
 	ulong sectionDataCount;
@@ -86,13 +79,10 @@ public:
 
 
 	void populate(std::ifstream& mesh) {
-		if (populated) {
-			error("Can't populate MeshDescSection more than one time!");
-		}
-		populated = true;
-
 		mesh.read((char*)this, sizeof(ulong) * 3); // parse first three attributes
 		
+		expect(sectionID, 0xEBAEC3FAu);
+
 		unkMatIndices = new long[matIndexCount];
 		mesh.read((char*)unkMatIndices, sizeof(long) * matIndexCount);
 
@@ -115,10 +105,7 @@ public:
 	}
 };
 
-class MeshInfoSection {
-	bool populated = false;
-
-public:
+struct MeshInfoSection {
 	struct MatAssignment {
 		long model;
 		long mesh;
@@ -156,10 +143,7 @@ public:
 		UVFormat uvFormat;
 	};
 
-	class ModelLodSettings {
-		bool populated = false;
-
-	public:
+	struct ModelLodSettings {
 		ulong unknownCount;
 		byte* unknownByte1 = nullptr;
 		byte* unknownByte2 = nullptr;
@@ -167,10 +151,6 @@ public:
 		byte* unknownByte4 = nullptr;
 
 		void populate(std::ifstream& mesh) {
-			if (populated) {
-				error("Can't populate ModelLodSettings more than one time!");
-			}
-			populated = true;
 			mesh.read((char*)&unknownCount, sizeof(ulong));
 
 			unknownByte1 = new byte[unknownCount];
@@ -239,12 +219,9 @@ public:
 	}
 
 	void populate(std::ifstream& mesh) {
-		if (populated) {
-			error("Can't populate MeshInfoSection more than one time!");
-		}
-		populated = true;
-
 		mesh.read((char*)this, 72); // parse until modelIDs array
+
+		expect(sectionID, 0x1A1541BCu);
 
 		modelIDs = new ulong[modelCount];
 		mesh.read((char*)modelIDs, sizeof(ulong) * modelCount);
@@ -260,6 +237,8 @@ public:
 
 		read_ulong(lodSectionID, mesh);
 
+		expect(lodSectionID, 0x8E3E068Eu);
+
 		lodSettings = new ulong[lodSettingsCount];
 		mesh.read((char*)lodSettings, sizeof(ulong) * lodSettingsCount);
 
@@ -271,12 +250,16 @@ public:
 
 		read_ulong(modelLodSectionID, mesh);
 
+		expect(modelLodSectionID, 0x37D749A6u);
+
 		modelLodSettings = new ModelLodSettings[modelLodCount];
 		for (int i = 0; i < modelLodCount; ++i)
 			modelLodSettings[i].populate(mesh);
 
 		read_ulong(boneSectionID, mesh);
 		
+		expect(boneSectionID, 0x93D9A424u);
+
 		bones = new Types::Bone[boneCount];
 		mesh.read((char*)bones, sizeof(Types::Bone) * boneCount);
 	}
@@ -287,10 +270,7 @@ public:
 	}
 };
 
-class MeshDataSection {
-	bool populated = false;
-
-public:
+struct MeshDataSection {
 	ulong sectionID; // 0x95DBDB69
 	
 	std::vector<byte*> vertDataSections;
@@ -304,12 +284,9 @@ public:
 	}
 
 	void populate(std::ifstream& mesh, MeshDescSection& meshDescSection) {
-		if (populated) {
-			error("Can't populate MeshDataSection more than one time!");
-		}
-		populated = true;
-
 		read_ulong(sectionID, mesh);
+
+		expect(sectionID, 0x95DBDB69u);
 
 		for (int i = 0; i < meshDescSection.sectionDataCount; ++i) {
 			byte* tmp_buf = new byte[meshDescSection.vertSectionSizes[i]];
@@ -342,43 +319,25 @@ public:
 
 template<typename VERTEX> 
 	requires std::is_same_v<VERTEX, Types::Vertex16> || std::is_same_v<VERTEX, Types::Vertex24>
-class MeshBuffer {
-	bool populated = false;
-
-public:
+struct MeshBuffer {
 	std::vector<std::vector<VERTEX>> subMeshesVertexContainer;
 	std::vector<std::vector<byte>> subMeshesUVContainer;
 	std::vector<std::vector<Types::Face>> subMeshesFaceContainer;
 	std::vector<std::vector<byte>> subMeshesSkinContainer;
 
-	static bool checkVert(VERTEX vertex) {
-		if constexpr (std::is_same_v<VERTEX, Types::Vertex16>) {
-			Types::Vertex16* vertex16 = &vertex;
-			if (vertex16->checkVert == 15360)
-				return true;
-			return false;
-		}
-		else {
-			Types::Vertex24* vertex24 = &vertex;
-			if (vertex24->checkVert == 1.0f)
-				return true;
-			return false;
-		}
+	static void checkVert(VERTEX vertex) {
+		if constexpr (std::is_same_v<VERTEX, Types::Vertex16>) 
+			expect(((Types::Vertex16*)&vertex)->checkVert, ushort(15360));
+		else 
+			expect(((Types::Vertex24*)&vertex)->checkVert, 1.0f);
 	}
 
 	void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int meshNumber) {
-		if (populated) {
-			error("Can't populate MeshBuffer more than one time!");
-		}
-		populated = true;
-
 		for (int subMesh = 0; subMesh < meshInfoSection.meshInfos[meshNumber].subMeshCount; ++subMesh) {
 			VERTEX* v = (VERTEX*)meshDataSection.vertDataSections[meshNumber];
 			subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
 			for (int vertexCounter = 0; vertexCounter < meshInfoSection.subMeshInfos[subMesh].vertCount; ++vertexCounter) {
-				if (!checkVert(v[vertexCounter])) {
-					error("CheckVert didnt match!");
-				}
+				checkVert(v[vertexCounter]);
 				subMeshesVertexContainer[subMesh].push_back(v[vertexCounter]);
 			}
 			// UV loop here...
@@ -387,7 +346,6 @@ public:
 			for (int faceCounter = 0; faceCounter < meshInfoSection.subMeshInfos[subMesh].faceIndicesCount / 3; ++faceCounter) {
 				subMeshesFaceContainer[subMesh].push_back(f[faceCounter]);
 			}
-			// Skin loop here...
 			byte* s = meshDataSection.skinDataSections[meshNumber];
 			subMeshesSkinContainer.push_back(std::vector<byte>{});
 			for (int skinCounter = 0; skinCounter < meshInfoSection.subMeshInfos[subMesh].skinCount; ++skinCounter) {
@@ -412,6 +370,9 @@ int main() {
 	
 	Header header{};
 	mesh.read((char*)&header, sizeof(Header)); // No pointers -> directly parsed
+
+	expect(header.magic_u, 0x48534D4Du);
+	expect(header.version, 0x11u);
 
 	MeshDescSection meshDescSection(mesh);
 	MeshInfoSection meshInfoSection(mesh);
