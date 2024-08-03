@@ -372,6 +372,7 @@ exit(-1)
 				}
 			};
 		}
+		// Entire SKEL parsing is experimental
 		namespace SKEL {
 			namespace TYPES {
 #pragma pack(push, 1)
@@ -503,9 +504,7 @@ exit(-1)
 					for (int boneCounter = 0; boneCounter < header.boneCount1; ++boneCounter)
 						boneNames.push_back(getNextString());
 
-					skel.seekg((ulong)backup + header.boneNameSecSize + 3, std::ios_base::beg); // Seek here is absolutely not the typical way to go...
-
-					std::cout << std::hex << skel.tellg();
+					skel.seekg((ulong)backup + header.boneNameSecSize + 4, std::ios_base::beg); // Seek here is absolutely not the typical way to go...
 
 					bones = new TYPES::Bone[header.boneCount1];
 
