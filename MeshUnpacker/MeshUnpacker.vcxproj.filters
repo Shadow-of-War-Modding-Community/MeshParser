@@ -15,15 +15,27 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Unpacker\half.h">
+    <ClInclude Include="Source\Unpacker\Internal\half.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Unpacker\Internal\Mesh\mesh.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Unpacker\Internal\Skel\skel.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Unpacker\Internal\includes-types-defs.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Unpacker\unpacker.h">
+    <ClCompile Include="Source\Unpacker\main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Unpacker\main.cpp">
+    <ClCompile Include="Source\Unpacker\Internal\Skel\skel.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Unpacker\Internal\Mesh\mesh.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
