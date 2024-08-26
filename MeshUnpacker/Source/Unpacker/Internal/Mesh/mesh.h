@@ -232,12 +232,19 @@ namespace MESH_UNPACKER {
 			~MeshDataSection();
 		};
 
+		struct BufferLayout {
+			std::vector<std::pair<MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout::Attribute,
+				MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout::Type>> order;
+
+			void populate(MeshInfoSection&, int);
+		};
+
 		struct LODBuffer {
 			std::vector<std::vector<TYPES::VertexAttribute>> meshVertexAttributeContainers;
 			std::vector<std::vector<TYPES::Face>> meshFaceContainers;
 			std::vector<std::vector<byte>> meshVertexGroupContainers;
 
-			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber, int mesh_counted);
+			void populate(MeshInfoSection&, MeshDataSection&, int, int);
 		};
 	}
 
@@ -255,6 +262,8 @@ namespace MESH_UNPACKER {
 		bool load_once = false;
 
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+
+		std::vector<INTERNAL::MESH::BufferLayout> bufferLayouts;
 
 	public:
 
