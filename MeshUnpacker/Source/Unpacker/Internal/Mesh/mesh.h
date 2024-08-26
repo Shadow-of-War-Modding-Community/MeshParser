@@ -225,6 +225,7 @@ namespace MESH_UNPACKER {
 		template<typename VERTEX>
 			requires std::is_same_v<VERTEX, TYPES::Vertex16> || std::is_same_v<VERTEX, TYPES::Vertex24>
 		class MeshBuffer {
+
 			static void checkVert(VERTEX vertex) {
 				if constexpr (std::is_same_v<VERTEX, TYPES::Vertex16>)
 					expect(((TYPES::Vertex16*)&vertex)->checkVert, ushort(15360));
@@ -238,23 +239,23 @@ namespace MESH_UNPACKER {
 			std::vector<std::vector<TYPES::Face>> subMeshesFaceContainer;
 			std::vector<std::vector<byte>> subMeshesSkinContainer;
 
-			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber) {
+			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber, int mesh_counted) {
 				for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodNumber].meshCount; ++mesh) {
 					VERTEX* v = (VERTEX*)meshDataSection.vertDataSections[lodNumber];
 					subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
-					for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh].verticesCount; ++vertexCounter) {
+					for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
 						checkVert(v[vertexCounter]);
 						subMeshesVertexContainer[mesh].push_back(v[vertexCounter]);
 					}
 					// UV loop here...
 					TYPES::Face* f = (TYPES::Face*)meshDataSection.faceDataSections[lodNumber];
 					subMeshesFaceContainer.push_back(std::vector<TYPES::Face>{});
-					for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh].faceIndicesCount / 3; ++faceCounter) {
+					for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
 						subMeshesFaceContainer[mesh].push_back(f[faceCounter]);
 					}
 					byte* s = meshDataSection.skinDataSections[lodNumber];
 					subMeshesSkinContainer.push_back(std::vector<byte>{});
-					for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh].vertexGroupsCount; ++skinCounter) {
+					for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++skinCounter) {
 						subMeshesSkinContainer[mesh].push_back(s[skinCounter]);
 					}
 				}

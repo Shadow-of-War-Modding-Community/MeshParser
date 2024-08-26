@@ -8,14 +8,16 @@ int main() {
 	
 	auto m = mesh.getMesh();
 
-	std::ofstream file("F:\\out.obj");
-	for (int i = 0; i < m->meshBuffersV16[0].subMeshesVertexContainer[0].size(); ++i) {
-		auto v = m->meshBuffersV16[0].subMeshesVertexContainer[0][i];
-		file << "v " << v.x << " " << v.y << " " << v.z << "\n";
-	}
-	for (int i = 0; i < m->meshBuffersV16[0].subMeshesFaceContainer[0].size(); ++i) {
-		auto f = m->meshBuffersV16[0].subMeshesFaceContainer[0][i];
-		file << "f " << f.index1 + 1 << "/ " << f.index2 + 1 << "/ " << f.index3 + 1 << "\n";
+	std::ofstream file("F:\\out1.obj");
+	for (int j = 0; j < m->meshBuffersV16.size(); ++j) {
+		for (int i = 0; i < m->meshBuffersV16[j].subMeshesVertexContainer[0].size(); ++i) {
+			auto v = m->meshBuffersV16[j].subMeshesVertexContainer[0][i];
+			file << "v " << v.x << " " << v.y << " " << v.z << "\n";
+		}
+		for (int i = 0; i < m->meshBuffersV16[j].subMeshesFaceContainer[0].size(); ++i) {
+			auto f = m->meshBuffersV16[j].subMeshesFaceContainer[0][i];
+			file << "f " << f.index1 + 1 << "/ " << f.index2 + 1 << "/ " << f.index3 + 1 << "\n";
+		}
 	}
 
 	//std::ifstream skel("F:\\Sow\\unpacked-game\\characters\\modelweapons\\balrog\\balrog_whip\\balrog_whip.skel");

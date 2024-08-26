@@ -101,19 +101,21 @@ void MESH_UNPACKER::MeshLoader::load(const std::string& mesh_file_name, const st
 	mesh->meshInfoSection.populate(file);
 	mesh->meshDataSection.populate(file, mesh->meshDescSection);
 
+	int mesh_counted = 0;
 	for (int lodCounter = 0; lodCounter < mesh->meshInfoSection.lodCount; ++lodCounter) {
 		Mesh::VertexType vt = determine_vertexType(mesh->meshDataSection.vertDataSections[lodCounter]);
 		if (vt == Mesh::VertexType::Vertex16) {
 			mesh->meshBuffersV16.push_back(MESH::MeshBuffer<MESH::TYPES::Vertex16>());
-			mesh->meshBuffersV16[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter);
+			mesh->meshBuffersV16[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter, mesh_counted);
 		}
 		else if (vt == Mesh::VertexType::Vertex24) {
 			mesh->meshBuffersV24.push_back(MESH::MeshBuffer<MESH::TYPES::Vertex24>{});
-			mesh->meshBuffersV24[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter);
+			mesh->meshBuffersV24[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter, mesh_counted);
 		}
 		else {
 			error("MeshLoader can't deduce Vertex type!");
 		}
+		mesh_counted += mesh->meshInfoSection.lodInfos[lodCounter].meshCount;
 		mesh->vertexTypes.push_back(vt);
 	}
 }
