@@ -70,10 +70,10 @@ MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::~MeshDataSection() {
 MESH_UNPACKER::Mesh::VertexType MESH_UNPACKER::MeshLoader::determine_vertexType(byte* vertDataBuffer) {
 	using namespace INTERNAL::MESH::TYPES;
 	Vertex16* v16 = (Vertex16*)vertDataBuffer;
-	if (v16->checkVert == 15360)
+	if ((float)v16->positions.w == 1.0f)
 		return Mesh::VertexType::Vertex16;
 	Vertex24* v24 = (Vertex24*)vertDataBuffer;
-	if (v24->checkVert == 1.0f)
+	if (v24->positions.w == 1.0f)
 		return Mesh::VertexType::Vertex24;
 	return Mesh::VertexType::Unknown;
 }

@@ -228,9 +228,9 @@ namespace MESH_UNPACKER {
 
 			static void checkVert(VERTEX vertex) {
 				if constexpr (std::is_same_v<VERTEX, TYPES::Vertex16>)
-					expect(((TYPES::Vertex16*)&vertex)->checkVert, ushort(15360));
+					expect((float)((TYPES::Vertex16*)&vertex)->positions.w, 1.0f);
 				else
-					expect(((TYPES::Vertex24*)&vertex)->checkVert, 1.0f);
+					expect(((TYPES::Vertex24*)&vertex)->positions.w, 1.0f);
 			}
 
 		public:

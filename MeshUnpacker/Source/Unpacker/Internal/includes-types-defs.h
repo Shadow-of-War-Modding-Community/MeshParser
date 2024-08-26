@@ -29,23 +29,122 @@ exit(-1)
 
 		namespace MESH {
 			namespace TYPES {
+				struct Vector3f {
+					float x, y, z;
+				};
+				
+				using Normal = Vector3f;
+				using Tangent = Vector3f;
+				using Bitangent = Vector3f;
+
+				struct Quaternion {
+					float w, x, y, z;
+				};
+
 				struct Bone {
 					ulong boneID;
-					ushort boneIndex;
-					ushort boneChild;
-					float a11, a12, a13, a14,
-						a21, a22, a23, a24;
+					short parentIndex;
+					ushort childCount;
+					Vector3f translation;
+					Quaternion rotation;
+					float scale;
+				};
+
+				struct Positions16 {
+					half x, y, z, w;
+				};
+
+				struct Positions32 {
+					float x, y, z, w;
+				};
+
+				struct Weights {
+					union {
+						byte weight[4];
+						struct {
+							byte weight1, weight2, weight3, weight4;
+						};
+					};
+					union {
+						byte vertexGroupIndex[4];
+						struct {
+							byte vertexGroupIndex1, vertexGroupIndex2,
+								vertexGroupIndex3, vertexGroupIndex4;
+						};
+					};
 				};
 
 				struct Vertex16 {
-					half x, y, z;
-					ushort checkVert; // 15360
-					byte weight1, weight2, weight3, weight4, bone1, bone2, bone3, bone4;
+					Positions16 positions;
+					Weights weights;
 				};
 
 				struct Vertex24 {
-					float x, y, z, checkVert; // 1.0
-					byte weight1, weight2, weight3, weight4, bone1, bone2, bone3, bone4;
+					Positions32 positions;
+					Weights weights;
+				};
+
+				union TextureCoordinate16 {
+					struct UV_Channel_ushort {
+						ushort u, v;
+					} uv_channel_ushort;
+
+					struct UV_Channel_half {
+						half u, v;
+						//UV_Channel_half() : u(0), v(0) {}
+					} uv_channel_half;
+
+					TextureCoordinate16() : uv_channel_ushort{ 0,0 } {}
+				};
+
+				union TextureCoordinate32 {
+					struct UV_Channel_ulong {
+						ulong u, v;
+					} uv_channel_ulong;
+
+					struct UV_Channel_float {
+						float u, v;
+					} uv_channel_float;
+
+					TextureCoordinate32() : uv_channel_ulong{0, 0} {}
+				};
+
+				struct RGBA8 {
+					byte r, g, b, a;
+				};
+
+				struct VertexAttributes44 {
+					TextureCoordinate16 textureCoordinate;
+					Normal normal;
+					Tangent tangent;
+					Bitangent bitangent;
+					RGBA8 color;
+				};
+
+				struct VertexAttributes48 {
+					TextureCoordinate32 textureCoordinate;
+					Normal normal;
+					Tangent tangent;
+					Bitangent bitangent;
+					RGBA8 color;
+				};
+
+				struct VertexAttributes52 {
+					TextureCoordinate32 textureCoordinate;
+					byte padding[4];
+					Normal normal;
+					Tangent tangent;
+					Bitangent bitangent;
+					RGBA8 color;
+				};
+
+				struct VertexAttributes56 {
+					TextureCoordinate32 textureCoordinate;
+					byte padding[8];
+					Normal normal;
+					Tangent tangent;
+					Bitangent bitangent;
+					RGBA8 color;
 				};
 
 				struct Face {

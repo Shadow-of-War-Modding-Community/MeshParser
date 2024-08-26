@@ -6,12 +6,16 @@ int main() {
 	//MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelweapons\\player\\1h_blunt\\celebrimborhammer\\player_celebrimborhammer.mesh");
 	MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelcharacters\\balrog\\balrog_base.mesh");
 	
+	MESH_UNPACKER::INTERNAL::MESH::TYPES::TextureCoordinate16 tc16;
+
+	
+
 	auto m = mesh.getMesh();
 
 	std::ofstream file("F:\\out1.obj");
 	for (int j = 0; j < m->meshBuffersV16.size(); ++j) {
 		for (int i = 0; i < m->meshBuffersV16[j].subMeshesVertexContainer[0].size(); ++i) {
-			auto v = m->meshBuffersV16[j].subMeshesVertexContainer[0][i];
+			auto v = m->meshBuffersV16[j].subMeshesVertexContainer[0][i].positions;
 			file << "v " << v.x << " " << v.y << " " << v.z << "\n";
 		}
 		for (int i = 0; i < m->meshBuffersV16[j].subMeshesFaceContainer[0].size(); ++i) {
