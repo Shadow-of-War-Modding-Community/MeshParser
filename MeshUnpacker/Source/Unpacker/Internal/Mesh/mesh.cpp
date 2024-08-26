@@ -9,25 +9,25 @@ void MESH_UNPACKER::INTERNAL::MESH::MeshDescSection::populate(std::ifstream& mes
 
 	expect(sectionID, 0xEBAEC3FAu);
 
-	unkMatIndices = new long[matIndexCount];
-	mesh.read((char*)unkMatIndices, sizeof(long) * matIndexCount);
+	unkMatIndices = new long[materialIndicesCount];
+	mesh.read((char*)unkMatIndices, sizeof(long) * materialIndicesCount);
 
-	meshMatIndices = new long[matIndexCount];
-	mesh.read((char*)meshMatIndices, sizeof(long) * matIndexCount);
+	materialIndices = new long[materialIndicesCount];
+	mesh.read((char*)materialIndices, sizeof(long) * materialIndicesCount);
 
-	vertSectionSizes = new ulong[sectionDataCount];
-	mesh.read((char*)vertSectionSizes, sizeof(ulong) * sectionDataCount);
+	vertexDataSectionSizes = new ulong[dataSectionCount];
+	mesh.read((char*)vertexDataSectionSizes, sizeof(ulong) * dataSectionCount);
 
-	faceSectionSizes = new ulong[sectionDataCount];
-	mesh.read((char*)faceSectionSizes, sizeof(ulong) * sectionDataCount);
+	faceDataSectionSizes = new ulong[dataSectionCount];
+	mesh.read((char*)faceDataSectionSizes, sizeof(ulong) * dataSectionCount);
 
-	skinSectionSizes = new ulong[sectionDataCount];
-	mesh.read((char*)skinSectionSizes, sizeof(ulong) * sectionDataCount);
+	vertexGroupDataSectionSizes = new ulong[dataSectionCount];
+	mesh.read((char*)vertexGroupDataSectionSizes, sizeof(ulong) * dataSectionCount);
 }
 
 MESH_UNPACKER::INTERNAL::MESH::MeshDescSection::~MeshDescSection() {
-	delete[] unkMatIndices, meshMatIndices, vertSectionSizes, faceSectionSizes,
-		skinSectionSizes;
+	delete[] unkMatIndices, materialIndices, vertexDataSectionSizes, faceDataSectionSizes,
+		vertexGroupDataSectionSizes;
 }
 
 MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::MeshDataSection(std::ifstream& mesh, MeshDescSection& meshDescSection) {
@@ -39,31 +39,31 @@ void MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::populate(std::ifstream& mes
 
 	expect(sectionID, 0x95DBDB69u);
 
-	for (int i = 0; i < meshDescSection.sectionDataCount; ++i) {
-		byte* tmp_buf = new byte[meshDescSection.vertSectionSizes[i]];
-		mesh.read((char*)tmp_buf, meshDescSection.vertSectionSizes[i]);
-		vertDataSections.push_back(tmp_buf);
+	for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
+		byte* tmp_buf = new byte[meshDescSection.vertexDataSectionSizes[i]];
+		mesh.read((char*)tmp_buf, meshDescSection.vertexDataSectionSizes[i]);
+		vertexDataSections.push_back(tmp_buf);
 	}
 
-	for (int i = 0; i < meshDescSection.sectionDataCount; ++i) {
-		byte* tmp_buf = new byte[meshDescSection.faceSectionSizes[i]];
-		mesh.read((char*)tmp_buf, meshDescSection.faceSectionSizes[i]);
+	for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
+		byte* tmp_buf = new byte[meshDescSection.faceDataSectionSizes[i]];
+		mesh.read((char*)tmp_buf, meshDescSection.faceDataSectionSizes[i]);
 		faceDataSections.push_back(tmp_buf);
 	}
 
-	for (int i = 0; i < meshDescSection.sectionDataCount; ++i) {
-		byte* tmp_buf = new byte[meshDescSection.skinSectionSizes[i]];
-		mesh.read((char*)tmp_buf, meshDescSection.skinSectionSizes[i]);
-		skinDataSections.push_back(tmp_buf);
+	for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
+		byte* tmp_buf = new byte[meshDescSection.vertexGroupDataSectionSizes[i]];
+		mesh.read((char*)tmp_buf, meshDescSection.vertexGroupDataSectionSizes[i]);
+		vertexGroupDataSections.push_back(tmp_buf);
 	}
 }
 
 MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::~MeshDataSection() {
-	for (auto& iter : vertDataSections)
+	for (auto& iter : vertexDataSections)
 		delete[] iter;
 	for (auto& iter : faceDataSections)
 		delete[] iter;
-	for (auto& iter : skinDataSections)
+	for (auto& iter : vertexGroupDataSections)
 		delete[] iter;
 }
 
@@ -103,7 +103,7 @@ void MESH_UNPACKER::MeshLoader::load(const std::string& mesh_file_name, const st
 
 	int mesh_counted = 0;
 	for (int lodCounter = 0; lodCounter < mesh->meshInfoSection.lodCount; ++lodCounter) {
-		Mesh::VertexType vt = determine_vertexType(mesh->meshDataSection.vertDataSections[lodCounter]);
+		Mesh::VertexType vt = determine_vertexType(mesh->meshDataSection.vertexDataSections[lodCounter]);
 		if (vt == Mesh::VertexType::Vertex16) {
 			mesh->meshBuffersV16.push_back(MESH::MeshBuffer<MESH::TYPES::Vertex16>());
 			mesh->meshBuffersV16[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter, mesh_counted);

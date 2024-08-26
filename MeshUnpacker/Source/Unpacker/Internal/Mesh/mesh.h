@@ -17,15 +17,15 @@ namespace MESH_UNPACKER {
 
 		struct MeshDescSection {
 			ulong sectionID; // 0xEBAEC3FA
-			ulong matIndexCount;
-			ulong sectionDataCount;
+			ulong materialIndicesCount;
+			ulong dataSectionCount;
 
 			long* unkMatIndices = nullptr;
-			long* meshMatIndices = nullptr;
+			long* materialIndices = nullptr;
 
-			ulong* vertSectionSizes = nullptr;
-			ulong* faceSectionSizes = nullptr;
-			ulong* skinSectionSizes = nullptr;
+			ulong* vertexDataSectionSizes = nullptr;
+			ulong* faceDataSectionSizes = nullptr;
+			ulong* vertexGroupDataSectionSizes = nullptr;
 
 			MeshDescSection() = default;
 
@@ -209,9 +209,9 @@ namespace MESH_UNPACKER {
 		struct MeshDataSection {
 			ulong sectionID; // 0x95DBDB69
 
-			std::vector<byte*> vertDataSections;
+			std::vector<byte*> vertexDataSections;
 			std::vector<byte*> faceDataSections;
-			std::vector<byte*> skinDataSections;
+			std::vector<byte*> vertexGroupDataSections;
 
 			MeshDataSection() = default;
 
@@ -241,7 +241,7 @@ namespace MESH_UNPACKER {
 
 			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber, int mesh_counted) {
 				for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodNumber].meshCount; ++mesh) {
-					VERTEX* v = (VERTEX*)meshDataSection.vertDataSections[lodNumber];
+					VERTEX* v = (VERTEX*)meshDataSection.vertexDataSections[lodNumber];
 					subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
 					for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
 						checkVert(v[vertexCounter]);
@@ -253,7 +253,7 @@ namespace MESH_UNPACKER {
 					for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
 						subMeshesFaceContainer[mesh].push_back(f[faceCounter]);
 					}
-					byte* s = meshDataSection.skinDataSections[lodNumber];
+					byte* s = meshDataSection.vertexGroupDataSections[lodNumber];
 					subMeshesSkinContainer.push_back(std::vector<byte>{});
 					for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++skinCounter) {
 						subMeshesSkinContainer[mesh].push_back(s[skinCounter]);
