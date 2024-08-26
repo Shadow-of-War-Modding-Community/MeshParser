@@ -67,15 +67,26 @@ MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::~MeshDataSection() {
 		delete[] iter;
 }
 
-MESH_UNPACKER::Mesh::VertexType MESH_UNPACKER::MeshLoader::determine_vertexType(byte* vertDataBuffer) {
-	using namespace INTERNAL::MESH::TYPES;
-	Vertex16* v16 = (Vertex16*)vertDataBuffer;
-	if ((float)v16->positions.w == 1.0f)
-		return Mesh::VertexType::Vertex16;
-	Vertex24* v24 = (Vertex24*)vertDataBuffer;
-	if (v24->positions.w == 1.0f)
-		return Mesh::VertexType::Vertex24;
-	return Mesh::VertexType::Unknown;
+void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber, int mesh_counted)
+{
+	for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodNumber].meshCount; ++mesh) {
+		VERTEX* v = (VERTEX*)meshDataSection.vertexDataSections[lodNumber];
+		subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
+		for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
+			subMeshesVertexContainer[mesh].push_back(v[vertexCounter]);
+		}
+		// UV loop here...
+		TYPES::Face* f = (TYPES::Face*)meshDataSection.faceDataSections[lodNumber];
+		subMeshesFaceContainer.push_back(std::vector<TYPES::Face>{});
+		for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
+			subMeshesFaceContainer[mesh].push_back(f[faceCounter]);
+		}
+		byte* s = meshDataSection.vertexGroupDataSections[lodNumber];
+		subMeshesSkinContainer.push_back(std::vector<byte>{});
+		for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++skinCounter) {
+			subMeshesSkinContainer[mesh].push_back(s[skinCounter]);
+		}
+	}
 }
 
 MESH_UNPACKER::MeshLoader::MeshLoader(const std::string& mesh_file_name, const std::string& skel_file_name) {
@@ -103,20 +114,9 @@ void MESH_UNPACKER::MeshLoader::load(const std::string& mesh_file_name, const st
 
 	int mesh_counted = 0;
 	for (int lodCounter = 0; lodCounter < mesh->meshInfoSection.lodCount; ++lodCounter) {
-		Mesh::VertexType vt = determine_vertexType(mesh->meshDataSection.vertexDataSections[lodCounter]);
-		if (vt == Mesh::VertexType::Vertex16) {
-			mesh->meshBuffersV16.push_back(MESH::MeshBuffer<MESH::TYPES::Vertex16>());
-			mesh->meshBuffersV16[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter, mesh_counted);
-		}
-		else if (vt == Mesh::VertexType::Vertex24) {
-			mesh->meshBuffersV24.push_back(MESH::MeshBuffer<MESH::TYPES::Vertex24>{});
-			mesh->meshBuffersV24[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter, mesh_counted);
-		}
-		else {
-			error("MeshLoader can't deduce Vertex type!");
-		}
+		mesh->lodBuffers.push_back(MESH::LODBuffer{});
+		mesh->lodBuffers[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, lodCounter, mesh_counted);
 		mesh_counted += mesh->meshInfoSection.lodInfos[lodCounter].meshCount;
-		mesh->vertexTypes.push_back(vt);
 	}
 }
 

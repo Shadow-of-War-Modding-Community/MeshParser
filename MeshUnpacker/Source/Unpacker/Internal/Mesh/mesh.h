@@ -97,7 +97,12 @@ namespace MESH_UNPACKER {
 
 			struct BufferLayoutSection {
 				struct VertexBufferLayout {
-					struct ElementLayout {
+					struct AttributeLayout {
+						enum class Buffer : byte {
+							Buffer_0 = 0,
+							Buffer_1 = 1
+						};
+
 						enum class Type : byte {
 							UNK0 = 0,
 							UNK1 = 1,
@@ -114,7 +119,7 @@ namespace MESH_UNPACKER {
 							VECTOR4F16 = 12
 						};
 
-						enum class Element : byte {
+						enum class Attribute : byte {
 							POSITION = 0,
 							NORMAL = 1,
 							TANGENT = 2,
@@ -127,17 +132,22 @@ namespace MESH_UNPACKER {
 							UNK9 = 9,
 							UNK10 = 10,
 							UNK11 = 11,
-							UNK12 = 12,
+							UNK12 = 12
 						};
 
-						byte bufferIndex;
+						enum class Channel : byte {
+							Channel_0 = 0,
+							Channel_1 = 1
+						};
+
+						Buffer bufferIndex;
 						Type type;
-						Element element;
-						byte channel;
+						Attribute attribute;
+						Channel channel;
 					};
 
-					ulong elementCount;
-					ElementLayout* elementsLayout = nullptr;
+					ulong attributesCount;
+					AttributeLayout* attributesLayout = nullptr;
 
 					void populate(std::ifstream&);
 
@@ -222,72 +232,29 @@ namespace MESH_UNPACKER {
 			~MeshDataSection();
 		};
 
-		template<typename VERTEX>
-			requires std::is_same_v<VERTEX, TYPES::Vertex16> || std::is_same_v<VERTEX, TYPES::Vertex24>
-		class MeshBuffer {
+		struct LODBuffer {
+			std::vector<std::vector<TYPES::VertexAttribute>> meshVertexAttributeContainers;
+			std::vector<std::vector<TYPES::Face>> meshFaceContainers;
+			std::vector<std::vector<byte>> meshVertexGroupContainers;
 
-			static void checkVert(VERTEX vertex) {
-				if constexpr (std::is_same_v<VERTEX, TYPES::Vertex16>)
-					expect((float)((TYPES::Vertex16*)&vertex)->positions.w, 1.0f);
-				else
-					expect(((TYPES::Vertex24*)&vertex)->positions.w, 1.0f);
-			}
-
-		public:
-			std::vector<std::vector<VERTEX>> subMeshesVertexContainer;
-			std::vector<std::vector<byte>> subMeshesUVContainer;
-			std::vector<std::vector<TYPES::Face>> subMeshesFaceContainer;
-			std::vector<std::vector<byte>> subMeshesSkinContainer;
-
-			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber, int mesh_counted) {
-				for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodNumber].meshCount; ++mesh) {
-					VERTEX* v = (VERTEX*)meshDataSection.vertexDataSections[lodNumber];
-					subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
-					for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
-						checkVert(v[vertexCounter]);
-						subMeshesVertexContainer[mesh].push_back(v[vertexCounter]);
-					}
-					// UV loop here...
-					TYPES::Face* f = (TYPES::Face*)meshDataSection.faceDataSections[lodNumber];
-					subMeshesFaceContainer.push_back(std::vector<TYPES::Face>{});
-					for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
-						subMeshesFaceContainer[mesh].push_back(f[faceCounter]);
-					}
-					byte* s = meshDataSection.vertexGroupDataSections[lodNumber];
-					subMeshesSkinContainer.push_back(std::vector<byte>{});
-					for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++skinCounter) {
-						subMeshesSkinContainer[mesh].push_back(s[skinCounter]);
-					}
-				}
-			}
-
+			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber, int mesh_counted);
 		};
 	}
 
 	struct Mesh {
-		enum class VertexType {
-			Vertex16,
-			Vertex24,
-			Unknown
-		};
 
 		INTERNAL::MESH::Header header{};
 		INTERNAL::MESH::MeshDescSection meshDescSection{};
 		INTERNAL::MESH::MeshInfoSection meshInfoSection{};
 		INTERNAL::MESH::MeshDataSection meshDataSection{};
 
-		std::vector<INTERNAL::MESH::MeshBuffer<INTERNAL::MESH::TYPES::Vertex16>> meshBuffersV16{};
-		std::vector<INTERNAL::MESH::MeshBuffer<INTERNAL::MESH::TYPES::Vertex24>> meshBuffersV24{};
-
-		std::vector<VertexType> vertexTypes;
+		std::vector<INTERNAL::MESH::LODBuffer> lodBuffers;
 	};
 
 	class MeshLoader {
 		bool load_once = false;
 
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-
-		Mesh::VertexType determine_vertexType(byte*);
 
 	public:
 

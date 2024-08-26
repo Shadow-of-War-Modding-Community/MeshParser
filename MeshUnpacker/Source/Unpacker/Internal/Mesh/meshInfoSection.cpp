@@ -41,15 +41,15 @@ MESH_UNPACKER::INTERNAL::MESH::MeshInfoSection::LodSection::~LodSection() {
 }
 
 void MESH_UNPACKER::INTERNAL::MESH::MeshInfoSection::BufferLayoutSection::VertexBufferLayout::populate(std::ifstream& mesh) {
-	read_ulong(elementCount, mesh);
+	read_ulong(attributesCount, mesh);
 
-	elementsLayout = new ElementLayout[elementCount];
-	mesh.read((char*)elementsLayout, sizeof(ElementLayout) * elementCount);
+	attributesLayout = new AttributeLayout[attributesCount];
+	mesh.read((char*)attributesLayout, sizeof(AttributeLayout) * attributesCount);
 
 }
 
 MESH_UNPACKER::INTERNAL::MESH::MeshInfoSection::BufferLayoutSection::VertexBufferLayout::~VertexBufferLayout() {
-	delete[] elementsLayout;
+	delete[] attributesLayout;
 }
 
 void MESH_UNPACKER::INTERNAL::MESH::MeshInfoSection::BufferLayoutSection::populate(std::ifstream& mesh, ulong bufferLayoutCount) {

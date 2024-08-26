@@ -74,26 +74,15 @@ exit(-1)
 					};
 				};
 
-				struct Vertex16 {
-					Positions16 positions;
-					Weights weights;
-				};
-
-				struct Vertex24 {
-					Positions32 positions;
-					Weights weights;
-				};
-
 				union TextureCoordinate16 {
 					struct UV_Channel_ushort {
 						ushort u, v;
 					} uv_channel_ushort;
-
+				
 					struct UV_Channel_half {
 						half u, v;
-						//UV_Channel_half() : u(0), v(0) {}
 					} uv_channel_half;
-
+				
 					TextureCoordinate16() : uv_channel_ushort{ 0,0 } {}
 				};
 
@@ -113,34 +102,10 @@ exit(-1)
 					byte r, g, b, a;
 				};
 
-				struct VertexAttributes44 {
-					TextureCoordinate16 textureCoordinate;
-					Normal normal;
-					Tangent tangent;
-					Bitangent bitangent;
-					RGBA8 color;
-				};
-
-				struct VertexAttributes48 {
-					TextureCoordinate32 textureCoordinate;
-					Normal normal;
-					Tangent tangent;
-					Bitangent bitangent;
-					RGBA8 color;
-				};
-
-				struct VertexAttributes52 {
-					TextureCoordinate32 textureCoordinate;
-					byte padding[4];
-					Normal normal;
-					Tangent tangent;
-					Bitangent bitangent;
-					RGBA8 color;
-				};
-
-				struct VertexAttributes56 {
-					TextureCoordinate32 textureCoordinate;
-					byte padding[8];
+				struct VertexAttribute {
+					Positions32 position;
+					Weights weights;
+					TextureCoordinate32 uv;
 					Normal normal;
 					Tangent tangent;
 					Bitangent bitangent;

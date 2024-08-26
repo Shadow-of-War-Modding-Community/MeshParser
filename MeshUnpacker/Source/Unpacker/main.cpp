@@ -6,7 +6,6 @@ int main() {
 	//MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelweapons\\player\\1h_blunt\\celebrimborhammer\\player_celebrimborhammer.mesh");
 	MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelcharacters\\balrog\\balrog_base.mesh");
 	
-	MESH_UNPACKER::INTERNAL::MESH::TYPES::TextureCoordinate16 tc16;
 
 	
 
