@@ -144,6 +144,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Unpacker\Internal\Mesh\mesh.cpp" />
+    <ClCompile Include="Source\Unpacker\Internal\Mesh\meshInfoSection.cpp" />
     <ClCompile Include="Source\Unpacker\Internal\Skel\skel.cpp" />
     <ClCompile Include="Source\Unpacker\main.cpp" />
   </ItemGroup>

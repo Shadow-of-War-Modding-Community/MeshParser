@@ -37,61 +37,136 @@ namespace MESH_UNPACKER {
 		};
 
 		struct MeshInfoSection {
-			struct MatAssignment {
-				long model;
-				long mesh;
-				long mat;
+			struct Connection {
+				long lodGoup;
+				long lod;
+				long material;
 				long unk;
 			};
 
-			struct MeshInfo {
-				ulong vertSecSize;
-				ulong faceSecSize;
-				ulong skinSecSize;
-				ulong subMeshCount;
-
+			struct LodInfo {
+				ulong vertexDataSize;
+				ulong faceDataSize;
+				ulong VertexGroupDataSize;
+				ulong meshCount;
 				ushort faceCount[16];
 			};
 
-			struct SubMeshInfo {
-				enum UVFormat : ulong {
-					UVArray52,
-					UVArray56,
-					UVArray48,
-					UVArray44
-				};
-
-				ulong offset;
-				ulong vertStart;
-				ulong vertCount;
-				ulong faceIndicesStart;
+			struct MeshInfo {
+				ulong dataOffset;
+				ulong verticesOffset;
+				ulong verticesCount;
+				ulong faceIndicesOffset;
 				ulong faceIndicesCount;
-				ulong skinStart;
-				ulong skinCount;
+				ulong vertexGroupsOffset;
+				ulong vertexGroupsCount;
 				ulong unknown7;
 				ulong unknown8;
-
-				UVFormat uvFormat;
+				ulong layerIndex;
 			};
 
-			struct ModelLodSettings {
-				ulong unknownCount;
-				byte* unknownByte1 = nullptr;
-				byte* unknownByte2 = nullptr;
-				byte* unknownByte3 = nullptr;
-				byte* unknownByte4 = nullptr;
+			struct LodSection {
+				struct LodThresholds {
+					float* meshLodThresholds = nullptr;
+					float* shadowLodThresholds = nullptr;
 
-				void populate(std::ifstream&);
+					void populate(std::ifstream&, ulong, ulong);
 
-				~ModelLodSettings();
+					~LodThresholds();
+				};
+
+				struct LodConnections {
+					ulong* meshLodConnections = nullptr;
+					ulong* shadowLodConnections = nullptr;
+
+					void populate(std::ifstream&, ulong, ulong);
+
+					~LodConnections();
+				};
+
+				ulong sectionID;
+				ulong* lodSettings = nullptr;
+				LodThresholds lodThresholds;
+				LodConnections lodConnections;
+
+				void populate(std::ifstream&, ulong, ulong, ulong);
+
+				~LodSection();
+
+			};
+
+			struct BufferLayoutSection {
+				struct VertexBufferLayout {
+					struct ElementLayout {
+						enum class Type : byte {
+							UNK0 = 0,
+							UNK1 = 1,
+							VECTOR3F32 = 2,
+							VECTOR4F32 = 3,
+							UINT8 = 4,
+							UNK5 = 5,
+							UNK6 = 6,
+							UNK7 = 7,
+							UNK8 = 8,
+							UINT16 = 9,
+							UNK10 = 10,
+							UNK11 = 11,
+							VECTOR4F16 = 12
+						};
+
+						enum class Element : byte {
+							POSITION = 0,
+							NORMAL = 1,
+							TANGENT = 2,
+							BITANGENT = 3,
+							TEXCOORD = 4,
+							COLOR = 5,
+							WEIGHT = 6,
+							VERTEXGROUP = 7,
+							UNK8 = 8,
+							UNK9 = 9,
+							UNK10 = 10,
+							UNK11 = 11,
+							UNK12 = 12,
+						};
+
+						byte bufferIndex;
+						Type type;
+						Element element;
+						byte channel;
+					};
+
+					ulong elementCount;
+					ElementLayout* elementsLayout = nullptr;
+
+					void populate(std::ifstream&);
+
+					~VertexBufferLayout();
+				};
+				
+				ulong sectionID;
+				VertexBufferLayout* vertexBufferLayouts = nullptr;
+
+				void populate(std::ifstream&, ulong);
+
+				~BufferLayoutSection();
+			};
+
+			struct BoneSection {
+				ulong sectionID;
+				TYPES::Bone* bones = nullptr;
+
+				void populate(std::ifstream&, ulong);
+
+				~BoneSection();
 			};
 
 			ulong sectionID; // 0x1A1541BC
 
-			ulong modelCount;
-			ulong matAssignmentCount;
+			ulong lodGroupCount;
+			ulong connectionCount;
+			ulong lodCount;
 			ulong meshCount;
-			ulong subMeshCount;
 
 			ulong unknownULong1;
 
@@ -99,7 +174,7 @@ namespace MESH_UNPACKER {
 			ulong meshLodCount;
 			ulong shadowLodCount;
 
-			ulong modelLodCount;
+			ulong bufferLayoutCount;
 			ulong ulongReadCount;
 
 			float unknownFloat;
@@ -109,23 +184,18 @@ namespace MESH_UNPACKER {
 			ulong boneCount;
 			ulong boneSectionSize;
 
-			ulong* modelIDs;
+			ulong* lodGroupIDs = nullptr;
 
-			MatAssignment* matAssignments = nullptr;
+			Connection* connections = nullptr;
+
+			LodInfo* lodInfos = nullptr;
 			MeshInfo* meshInfos = nullptr;
-			SubMeshInfo* subMeshInfos = nullptr;
 
-			ulong lodSectionID; // 0x8E3E068E
-			ulong* lodSettings = nullptr;
-			float* lodThresholds = nullptr;
-			ulong* lodConnections = nullptr;
+			LodSection lodSection;
 
-			ulong modelLodSectionID; // 0x37D749A6
+			BufferLayoutSection bufferLayoutSection;
 
-			ModelLodSettings* modelLodSettings = nullptr;
-
-			ulong boneSectionID; // 0x93D9A424
-			TYPES::Bone* bones = nullptr;
+			BoneSection boneSection;
 
 			MeshInfoSection() = default;
 
@@ -168,24 +238,24 @@ namespace MESH_UNPACKER {
 			std::vector<std::vector<TYPES::Face>> subMeshesFaceContainer;
 			std::vector<std::vector<byte>> subMeshesSkinContainer;
 
-			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int meshNumber) {
-				for (int subMesh = 0; subMesh < meshInfoSection.meshInfos[meshNumber].subMeshCount; ++subMesh) {
-					VERTEX* v = (VERTEX*)meshDataSection.vertDataSections[meshNumber];
+			void populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, int lodNumber) {
+				for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodNumber].meshCount; ++mesh) {
+					VERTEX* v = (VERTEX*)meshDataSection.vertDataSections[lodNumber];
 					subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
-					for (int vertexCounter = 0; vertexCounter < meshInfoSection.subMeshInfos[subMesh].vertCount; ++vertexCounter) {
+					for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh].verticesCount; ++vertexCounter) {
 						checkVert(v[vertexCounter]);
-						subMeshesVertexContainer[subMesh].push_back(v[vertexCounter]);
+						subMeshesVertexContainer[mesh].push_back(v[vertexCounter]);
 					}
 					// UV loop here...
-					TYPES::Face* f = (TYPES::Face*)meshDataSection.faceDataSections[meshNumber];
+					TYPES::Face* f = (TYPES::Face*)meshDataSection.faceDataSections[lodNumber];
 					subMeshesFaceContainer.push_back(std::vector<TYPES::Face>{});
-					for (int faceCounter = 0; faceCounter < meshInfoSection.subMeshInfos[subMesh].faceIndicesCount / 3; ++faceCounter) {
-						subMeshesFaceContainer[subMesh].push_back(f[faceCounter]);
+					for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh].faceIndicesCount / 3; ++faceCounter) {
+						subMeshesFaceContainer[mesh].push_back(f[faceCounter]);
 					}
-					byte* s = meshDataSection.skinDataSections[meshNumber];
+					byte* s = meshDataSection.skinDataSections[lodNumber];
 					subMeshesSkinContainer.push_back(std::vector<byte>{});
-					for (int skinCounter = 0; skinCounter < meshInfoSection.subMeshInfos[subMesh].skinCount; ++skinCounter) {
-						subMeshesSkinContainer[subMesh].push_back(s[skinCounter]);
+					for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh].vertexGroupsCount; ++skinCounter) {
+						subMeshesSkinContainer[mesh].push_back(s[skinCounter]);
 					}
 				}
 			}
