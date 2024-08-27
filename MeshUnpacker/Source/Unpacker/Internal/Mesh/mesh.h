@@ -104,19 +104,19 @@ namespace MESH_UNPACKER {
 						};
 
 						enum class Type : byte {
-							UNK0 = 0,
-							UNK1 = 1,
+							TYPE0 = 0,
+							VECTOR2F32 = 1,
 							VECTOR3F32 = 2,
 							VECTOR4F32 = 3,
-							UINT8 = 4,
-							UNK5 = 5,
-							UNK6 = 6,
-							UNK7 = 7,
-							UNK8 = 8,
-							UINT16 = 9,
-							UNK10 = 10,
-							UNK11 = 11,
-							VECTOR4F16 = 12
+							VECTOR4U8 = 4,
+							TYPE5 = 5,
+							TYPE6 = 6,
+							TYPE7 = 7,
+							TYPE8 = 8,
+							VECTOR2U16 = 9,
+							TYPE10 = 10,
+							TYPE11 = 11,
+							VECTOR4F16 = 12,
 						};
 
 						enum class Attribute : byte {
@@ -233,8 +233,7 @@ namespace MESH_UNPACKER {
 		};
 
 		struct BufferLayout {
-			std::vector<std::pair<MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout::Attribute,
-				MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout::Type>> order;
+			std::vector<MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout> order;
 
 			void populate(MeshInfoSection&, int);
 		};
@@ -244,7 +243,7 @@ namespace MESH_UNPACKER {
 			std::vector<std::vector<TYPES::Face>> meshFaceContainers;
 			std::vector<std::vector<byte>> meshVertexGroupContainers;
 
-			void populate(MeshInfoSection&, MeshDataSection&, int, int);
+			void populate(MeshInfoSection&, MeshDataSection&, const std::vector<INTERNAL::MESH::BufferLayout>&, int, int);
 		};
 	}
 

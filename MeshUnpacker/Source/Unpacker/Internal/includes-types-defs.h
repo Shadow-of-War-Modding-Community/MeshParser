@@ -50,66 +50,45 @@ exit(-1)
 					float scale;
 				};
 
-				struct Positions16 {
+				struct Position16 {
 					half x, y, z, w;
 				};
 
-				struct Positions32 {
+				struct Position32 {
 					float x, y, z, w;
 				};
 
-				struct Weights {
-					union {
-						byte weight[4];
-						struct {
-							byte weight1, weight2, weight3, weight4;
-						};
-					};
-					union {
-						byte vertexGroupIndex[4];
-						struct {
-							byte vertexGroupIndex1, vertexGroupIndex2,
-								vertexGroupIndex3, vertexGroupIndex4;
-						};
+				union Weights{
+					byte weight[4];
+					struct {
+						byte weight1, weight2, weight3, weight4;
 					};
 				};
 
-				union TextureCoordinate16 {
-					struct UV_Channel_ushort {
-						ushort u, v;
-					} uv_channel_ushort;
-				
-					struct UV_Channel_half {
-						half u, v;
-					} uv_channel_half;
-				
-					TextureCoordinate16() : uv_channel_ushort{ 0,0 } {}
+				union VertexGroups{
+					byte vertexGroupIndex[4];
+					struct {
+						byte vertexGroupIndex1, vertexGroupIndex2, vertexGroupIndex3, vertexGroupIndex4;
+					};
 				};
 
-				union TextureCoordinate32 {
-					struct UV_Channel_ulong {
-						ulong u, v;
-					} uv_channel_ulong;
-
-					struct UV_Channel_float {
-						float u, v;
-					} uv_channel_float;
-
-					TextureCoordinate32() : uv_channel_ulong{0, 0} {}
+				struct UV {
+					float u, v;
 				};
 
-				struct RGBA8 {
+				struct Color {
 					byte r, g, b, a;
 				};
 
 				struct VertexAttribute {
-					Positions32 position;
+					Position32 position;
 					Weights weights;
-					TextureCoordinate32 uv;
+					VertexGroups vertexGroups;
+					UV uv;
 					Normal normal;
 					Tangent tangent;
 					Bitangent bitangent;
-					RGBA8 color;
+					Color color;
 				};
 
 				struct Face {
