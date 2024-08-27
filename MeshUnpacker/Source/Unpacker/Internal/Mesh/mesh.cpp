@@ -92,7 +92,8 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 	using Type = AttributeLayout::Type;
 	using Buffer = AttributeLayout::Buffer;
 
-	int virtual_buffer_offset = 0;
+	int virtual_vertex_buffer_offset = 0, virtual_face_buffer_offset = 0, virtual_vertexGroup_buffer_offset = 0;
+
 
 	auto read_attribute = [&](byte* vertexbuffer, const AttributeLayout& attributeLayout, TYPES::VertexAttribute& va, const Buffer& targetBuffer) 
 	{
@@ -102,17 +103,17 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::POSITION:
 				{
 					if (attributeLayout.type == Type::VECTOR4F16) {
-						TYPES::Position16* position = (TYPES::Position16*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Position16* position = (TYPES::Position16*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.position.x = (float)position->x;
 						va.position.y = (float)position->y;
 						va.position.z = (float)position->z;
 						va.position.w = (float)position->w;
-						virtual_buffer_offset += sizeof(TYPES::Position16);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Position16);
 					}
 					else if (attributeLayout.type == Type::VECTOR4F32) {
-						TYPES::Position32* position = (TYPES::Position32*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Position32* position = (TYPES::Position32*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.position = *position;
-						virtual_buffer_offset += sizeof(TYPES::Position32);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Position32);
 					}
 					else {
 						error("Unknown Type for POSITION");
@@ -122,9 +123,9 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::WEIGHT:
 				{
 					if (attributeLayout.type == Type::VECTOR4U8) {
-						TYPES::Weights* weights = (TYPES::Weights*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Weights* weights = (TYPES::Weights*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.weights = *weights;
-						virtual_buffer_offset += sizeof(TYPES::Weights);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Weights);
 					}
 					else {
 						error("Unknown Type for WEIGHT");
@@ -134,9 +135,9 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::VERTEXGROUP:
 				{
 					if (attributeLayout.type == Type::VECTOR4U8) {
-						TYPES::VertexGroups* vertexGroups = (TYPES::VertexGroups*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::VertexGroups* vertexGroups = (TYPES::VertexGroups*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.vertexGroups = *vertexGroups;
-						virtual_buffer_offset += sizeof(TYPES::VertexGroups);
+						virtual_vertex_buffer_offset += sizeof(TYPES::VertexGroups);
 					}
 					else {
 						error("Unknown Type for VERTEXGROUP");
@@ -146,15 +147,15 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::TEXCOORD:
 				{
 					if (attributeLayout.type == Type::VECTOR2F32) {
-						TYPES::UV* uv = (TYPES::UV*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::UV* uv = (TYPES::UV*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.uv = *uv;
-						virtual_buffer_offset += sizeof(TYPES::UV);
+						virtual_vertex_buffer_offset += sizeof(TYPES::UV);
 					}
 					else if (attributeLayout.type == Type::VECTOR2U16) {
-						ushort* uv = (ushort*)(vertexbuffer + virtual_buffer_offset);
+						ushort* uv = (ushort*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.uv.u = uv[0];
 						va.uv.v = uv[1];
-						virtual_buffer_offset += sizeof(ushort) * 2;
+						virtual_vertex_buffer_offset += sizeof(ushort) * 2;
 					}
 					else {
 						error("Unknown Type for TEXCOORD");
@@ -164,9 +165,9 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::NORMAL:
 				{
 					if (attributeLayout.type == Type::VECTOR3F32) {
-						TYPES::Normal* normal = (TYPES::Normal*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Normal* normal = (TYPES::Normal*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.normal = *normal;
-						virtual_buffer_offset += sizeof(TYPES::Normal);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Normal);
 					}
 					else {
 						error("Unknown Type for NORMAL");
@@ -176,9 +177,9 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::TANGENT:
 				{
 					if (attributeLayout.type == Type::VECTOR3F32) {
-						TYPES::Tangent* tangent = (TYPES::Tangent*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Tangent* tangent = (TYPES::Tangent*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.tangent = *tangent;
-						virtual_buffer_offset += sizeof(TYPES::Tangent);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Tangent);
 					}
 					else {
 						error("Unknown Type for TANGENT");
@@ -188,9 +189,9 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::BITANGENT:
 				{
 					if (attributeLayout.type == Type::VECTOR3F32) {
-						TYPES::Bitangent* bitangent = (TYPES::Bitangent*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Bitangent* bitangent = (TYPES::Bitangent*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.bitangent = *bitangent;
-						virtual_buffer_offset += sizeof(TYPES::Bitangent);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Bitangent);
 					}
 					else {
 						error("Unknown Type for BITANGENT");
@@ -200,9 +201,9 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				case Attribute::COLOR:
 				{
 					if (attributeLayout.type == Type::VECTOR4U8) {
-						TYPES::Color* color = (TYPES::Color*)(vertexbuffer + virtual_buffer_offset);
+						TYPES::Color* color = (TYPES::Color*)(vertexbuffer + virtual_vertex_buffer_offset);
 						va.color = *color;
-						virtual_buffer_offset += sizeof(TYPES::Color);
+						virtual_vertex_buffer_offset += sizeof(TYPES::Color);
 					}
 					else {
 						error("Unknown Type for COLOR");
@@ -215,37 +216,31 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 	for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodNumber].meshCount; ++mesh) {
 		auto current_layer_index = meshInfoSection.meshInfos[mesh_counted + mesh].layerIndex;
 		meshVertexAttributeContainers.push_back(std::vector<TYPES::VertexAttribute>{});	
-		// First loop is for POSITION, WEIGHTS, VERTEXGROUP
 		for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
 			TYPES::VertexAttribute vertexAttribute{};
 			for (auto& attribute : bufferLayouts[current_layer_index].order) {
-				read_attribute(meshDataSection.vertexDataSections[mesh_counted + mesh], attribute, vertexAttribute, Buffer::Buffer_0);
+				read_attribute(meshDataSection.vertexDataSections[lodNumber], attribute, vertexAttribute, Buffer::Buffer_0);
 			}
 			meshVertexAttributeContainers[mesh].push_back(vertexAttribute);
 		}
-		// Second loop is for the rest
 		for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
 			for (auto& attribute : bufferLayouts[current_layer_index].order) {
-				read_attribute(meshDataSection.vertexDataSections[mesh_counted + mesh], attribute, meshVertexAttributeContainers[mesh][vertexCounter],
+				read_attribute(meshDataSection.vertexDataSections[lodNumber], attribute, meshVertexAttributeContainers[mesh][vertexCounter],
 					Buffer::Buffer_1);
 			}
 		}
-		//VERTEX* v = (VERTEX*)meshDataSection.vertexDataSections[lodNumber];
-		//subMeshesVertexContainer.push_back(std::vector<VERTEX>{}); // To allocate the actual vertex container
-		//for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
-		//	subMeshesVertexContainer[mesh].push_back(v[vertexCounter]);
-		//}
-		//// UV loop here...
-		//TYPES::Face* f = (TYPES::Face*)meshDataSection.faceDataSections[lodNumber];
-		//subMeshesFaceContainer.push_back(std::vector<TYPES::Face>{});
-		//for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
-		//	subMeshesFaceContainer[mesh].push_back(f[faceCounter]);
-		//}
-		//byte* s = meshDataSection.vertexGroupDataSections[lodNumber];
-		//subMeshesSkinContainer.push_back(std::vector<byte>{});
-		//for (int skinCounter = 0; skinCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++skinCounter) {
-		//	subMeshesSkinContainer[mesh].push_back(s[skinCounter]);
-		//}
+		TYPES::Face* face = (TYPES::Face*)(meshDataSection.faceDataSections[lodNumber] + virtual_face_buffer_offset);
+		meshFaceContainers.push_back(std::vector<TYPES::Face>{});
+		for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
+			meshFaceContainers[mesh].push_back(face[faceCounter]);
+			virtual_face_buffer_offset += sizeof(TYPES::Face);
+		}
+		byte* vertexGroupIndex = (byte*)(meshDataSection.vertexGroupDataSections[lodNumber] + virtual_vertexGroup_buffer_offset);
+		meshVertexGroupContainers.push_back(std::vector<byte>{});
+		for (int vGCounter = 0; vGCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++vGCounter) {
+			meshVertexGroupContainers[mesh].push_back(vertexGroupIndex[vGCounter]);
+			virtual_vertexGroup_buffer_offset += sizeof(byte);
+		}
 	}
 }
 
