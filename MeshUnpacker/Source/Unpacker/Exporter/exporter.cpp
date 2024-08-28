@@ -1,11 +1,24 @@
 #include "../Internal/includes-types-defs.h"
 
-const aiScene* mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
-	// Only a temporal solution. This ensures that there is no important 
-	// stuff missing in order to create a valid .fbx file
-	Assimp::Importer referenceImporter;
-	auto const_scene = referenceImporter.ReadFile("F:\\reference.fbx", 0);
-	aiScene scene = *const_scene;
+std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
+	auto scene = std::make_unique<aiScene>();
+
+	aiMaterial* material = new aiMaterial();
+
+	aiColor3D diffuseColor(1.0f, 0.0f, 0.0f);
+	material->AddProperty(&diffuseColor, 1, AI_MATKEY_COLOR_DIFFUSE);
+
+	aiColor3D specularColor(1.0f, 0.0f, 0.0f);
+	material->AddProperty(&specularColor, 1, AI_MATKEY_COLOR_SPECULAR);
+
+	aiColor3D ambientColor(0.1f, 0.0f, 0.0f); 
+	material->AddProperty(&ambientColor, 1, AI_MATKEY_COLOR_AMBIENT);
+
+	aiColor3D emissiveColor(1.0f, 1.0f, 1.0f);
+	material->AddProperty(&emissiveColor, 1, AI_MATKEY_COLOR_EMISSIVE);
+
+	float shininess = 32.0f;
+	material->AddProperty(&shininess, 1, AI_MATKEY_SHININESS);
 
 	int mesh_counter = 0;
 	aiMesh** mesh_buffer = new aiMesh*[mesh.meshInfoSection.meshCount];
@@ -36,16 +49,25 @@ const aiScene* mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 			}
 			ai_mesh->mNumFaces = current_mesh_face_count;
 			ai_mesh->mFaces = faceBuffer;
-			mesh_buffer[mesh_counter] = ai_mesh;
+			ai_mesh->mMaterialIndex = 0;
+			mesh_buffer[mesh_counter] = ai_mesh;  // If the compiler warns here, ignore it...
 			mesh_counter++;
 		}
 	}
-	scene.mNumMeshes = mesh.meshInfoSection.meshCount;
-	scene.mMeshes = mesh_buffer;
+	scene->mNumMeshes = mesh.meshInfoSection.meshCount;
+	scene->mMeshes = mesh_buffer;
 
-	Assimp::Exporter exporter;
-	if (exporter.Export(&scene, "fbx", "F:\\out.fbx") != aiReturn_SUCCESS) {
-		std::cerr << "Fehler beim Exportieren der FBX-Datei" << std::endl;
-	}
-	return nullptr;
+	aiNode* rootNode = new aiNode;
+	rootNode->mName = "RootNode";
+	rootNode->mNumMeshes = mesh.meshInfoSection.meshCount;
+	rootNode->mMeshes = new unsigned int[mesh.meshInfoSection.meshCount];
+	for (int i = 0; i < mesh.meshInfoSection.meshCount; ++i)
+		rootNode->mMeshes[i] = i;
+	rootNode->mNumChildren = 0;
+
+	scene->mRootNode = rootNode;
+	scene->mNumMaterials = 1;
+	scene->mMaterials = new aiMaterial*[1]{material};
+
+	return scene;
 }
