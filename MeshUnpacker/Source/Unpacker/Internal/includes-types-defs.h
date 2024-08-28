@@ -8,6 +8,12 @@
 #include <memory>
 #include "half.h"
 
+// Remove this includes if you only want to test the unpacker without assimp dependencies!
+#include <assimp/Exporter.hpp>
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
+
+
 namespace MESH_UNPACKER {
 #define read_ulong(dst, hndl) hndl.read((char*)&dst, sizeof(ulong))
 #define error(msg) MessageBoxA(NULL, msg, "MeshLoader-ERROR", MB_ICONERROR);\
