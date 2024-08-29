@@ -148,14 +148,17 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 				{
 					if (attributeLayout.type == Type::VECTOR2F32) {
 						TYPES::UV* uv = (TYPES::UV*)(vertexbuffer + virtual_vertex_buffer_offset);
-						va.uv = *uv;
+						TYPES::UV tmpUV = *uv;
+						va.uvs.push_back(std::make_pair(tmpUV, false));
 						virtual_vertex_buffer_offset += sizeof(TYPES::UV);
 					}
 					else if (attributeLayout.type == Type::VECTOR2U16) {
-						ushort* uv = (ushort*)(vertexbuffer + virtual_vertex_buffer_offset);
-						va.uv.u = uv[0];
-						va.uv.v = uv[1];
-						virtual_vertex_buffer_offset += sizeof(ushort) * 2;
+						short* uv = (short*)(vertexbuffer + virtual_vertex_buffer_offset);
+						TYPES::UV tmpUV;
+						tmpUV.u = uv[0];
+						tmpUV.v = uv[1];
+						va.uvs.push_back(std::make_pair(tmpUV, true));
+						virtual_vertex_buffer_offset += sizeof(short) * 2;
 					}
 					else {
 						error("Unknown Type for TEXCOORD");

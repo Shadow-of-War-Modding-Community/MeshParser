@@ -90,7 +90,7 @@ exit(-1)
 					Position32 position;
 					Weights weights;
 					VertexGroups vertexGroups;
-					UV uv;
+					std::vector<std::pair<UV, bool>> uvs; // true = short, false = float
 					Normal normal;
 					Tangent tangent;
 					Bitangent bitangent;
