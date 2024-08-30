@@ -3,6 +3,8 @@
 //Likely exported later
 extern std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh);
 
+extern std::unique_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh(const aiScene* scene);
+
 int main() {
 	//MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelweapons\\player\\1h_blunt\\celebrimborhammer\\player_celebrimborhammer.mesh");
 	MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelcharacters\\balrog\\balrog_base.mesh");

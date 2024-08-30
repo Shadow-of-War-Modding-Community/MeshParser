@@ -64,7 +64,7 @@ std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 				colorsBuffer[vertexCounter].a = (float)vertex.color.a / 255.f;
 
 				for (int i = 0; i < uvChannelCount; ++i) {
-					if (vertex.uvs[i].second) { // true = ushort
+					if (vertex.uvs[i].second) { // true = short
 						uvsBuffers[i][vertexCounter].x = vertex.uvs[i].first.u;
 						uvsBuffers[i][vertexCounter].y = 1.f - vertex.uvs[i].first.v;
 						uvsBuffers[i][vertexCounter].x /= 32767.f;
@@ -112,11 +112,31 @@ std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 
 	aiNode* rootNode = new aiNode;
 	rootNode->mName = "RootNode";
+	
+	//mesh_counter = 0;
+	//aiNode** lodNodes = new aiNode*[mesh.lodBuffers.size()];
+	//for (int lodCounter = 0; lodCounter < mesh.lodBuffers.size(); ++lodCounter) {
+	//	lodNodes[lodCounter] = new aiNode;
+	//	lodNodes[lodCounter]->mName = aiString("LOD" + std::to_string(lodCounter + 1));
+	//	lodNodes[lodCounter]->mNumChildren = mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size();
+	//	unsigned int* meshes = new unsigned int[mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
+	//	//aiNode** meshNodes = new aiNode*[mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
+	//	for (int meshCounter = 0; meshCounter < mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+	//		meshes[meshCounter] = mesh_counter;
+	//		mesh_counter++;
+	//	}
+	//	lodNodes[lodCounter]->mMeshes = meshes;
+	//	//lodNodes[lodCounter]->addChildren(mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size(), meshNodes);
+	//}
+	//rootNode->addChildren(mesh.lodBuffers.size(), lodNodes);
+	 
+	 
 	rootNode->mNumMeshes = mesh.meshInfoSection.meshCount;
 	rootNode->mMeshes = new unsigned int[mesh.meshInfoSection.meshCount];
 	for (int i = 0; i < mesh.meshInfoSection.meshCount; ++i)
 		rootNode->mMeshes[i] = i;
 	rootNode->mNumChildren = 0;
+
 
 	scene->mRootNode = rootNode;
 	scene->mNumMaterials = 1;

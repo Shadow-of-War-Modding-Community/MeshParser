@@ -248,7 +248,6 @@ namespace MESH_UNPACKER {
 	}
 
 	struct Mesh {
-
 		INTERNAL::MESH::Header header{};
 		INTERNAL::MESH::MeshDescSection meshDescSection{};
 		INTERNAL::MESH::MeshInfoSection meshInfoSection{};
