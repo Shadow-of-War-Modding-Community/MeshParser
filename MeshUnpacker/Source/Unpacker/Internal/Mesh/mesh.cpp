@@ -259,16 +259,23 @@ void MESH_UNPACKER::MeshLoader::load(const std::string& mesh_file_name, const st
 	}
 	load_once = true;
 
-	std::ifstream file(mesh_file_name, std::ios::binary);
+	if (skel_file_name != "") {
+		std::ifstream skel_file(skel_file_name, std::ios::binary);
+		mesh->skeleton.header.populate(skel_file);
+		mesh->skeleton.boneSection.populate(skel_file, mesh->skeleton.header);
+		mesh->has_skeleton = true;
+	}
 
-	file.read((char*)&mesh->header, sizeof(MESH::Header));
+	std::ifstream mesh_file(mesh_file_name, std::ios::binary);
+
+	mesh_file.read((char*)&mesh->header, sizeof(MESH::Header));
 
 	expect(mesh->header.magic_u, 0x48534D4Du);
 	expect(mesh->header.version, 0x11u);
 
-	mesh->meshDescSection.populate(file);
-	mesh->meshInfoSection.populate(file);
-	mesh->meshDataSection.populate(file, mesh->meshDescSection);
+	mesh->meshDescSection.populate(mesh_file);
+	mesh->meshInfoSection.populate(mesh_file);
+	mesh->meshDataSection.populate(mesh_file, mesh->meshDescSection);
 
 	for (int i = 0; i < mesh->meshInfoSection.bufferLayoutCount; ++i) {
 		bufferLayouts.push_back(INTERNAL::MESH::BufferLayout{});

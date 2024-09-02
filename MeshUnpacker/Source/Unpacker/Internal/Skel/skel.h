@@ -75,5 +75,10 @@ namespace MESH_UNPACKER::INTERNAL::SKEL {
 
 		void populate(std::ifstream&, Header&);
 	};
+
+	struct Skeleton {
+		Header header{};
+		BoneSection boneSection{};
+	};
 }
 	

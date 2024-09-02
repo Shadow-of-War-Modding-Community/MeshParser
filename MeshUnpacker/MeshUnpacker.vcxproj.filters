@@ -44,7 +44,7 @@
     <ClCompile Include="Source\Unpacker\Exporter\exporter.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Unpacker\Importer\importer.cpp">
+    <ClCompile Include="Source\Unpacker\Repacker\repacker.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

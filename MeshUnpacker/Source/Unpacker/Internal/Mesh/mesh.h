@@ -1,6 +1,12 @@
 #pragma once
 #include "../includes-types-defs.h"
 
+//FRWDDEC
+namespace MESH_UNPACKER::INTERNAL::SKEL {
+	struct Skeleton;
+}
+
+
 namespace MESH_UNPACKER {
 	namespace INTERNAL::MESH {
 		struct Header {
@@ -248,10 +254,14 @@ namespace MESH_UNPACKER {
 	}
 
 	struct Mesh {
+		bool has_skeleton = false;
+
 		INTERNAL::MESH::Header header{};
 		INTERNAL::MESH::MeshDescSection meshDescSection{};
 		INTERNAL::MESH::MeshInfoSection meshInfoSection{};
 		INTERNAL::MESH::MeshDataSection meshDataSection{};
+
+		INTERNAL::SKEL::Skeleton skeleton{};
 
 		std::vector<INTERNAL::MESH::LODBuffer> lodBuffers;
 	};

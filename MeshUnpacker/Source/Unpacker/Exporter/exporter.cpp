@@ -1,7 +1,7 @@
 #include "../Internal/includes-types-defs.h"
 
-std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
-	auto scene = std::make_unique<aiScene>();
+std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
+	auto scene = std::make_shared<aiScene>();
 
 	aiMaterial* material = new aiMaterial();
 
@@ -22,24 +22,24 @@ std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 	
 
 	int mesh_counter = 0;
-	aiMesh** mesh_buffer = new aiMesh*[mesh.meshInfoSection.meshCount];
-	for (int lodCounter = 0; lodCounter < mesh.lodBuffers.size(); ++lodCounter) {
-		for (int meshCounter = 0; meshCounter < mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+	aiMesh** mesh_buffer = new aiMesh*[mesh->meshInfoSection.meshCount];
+	for (int lodCounter = 0; lodCounter < mesh->lodBuffers.size(); ++lodCounter) {
+		for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
 			aiMesh* ai_mesh = new aiMesh;
-			auto current_mesh_vertex_count = mesh.lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].size();
+			auto current_mesh_vertex_count = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].size();
 			aiVector3D* positionBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* normalsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* tangentsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* bitangentsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiColor4D* colorsBuffer = new aiColor4D[current_mesh_vertex_count];
 			
-			auto uvChannelCount = mesh.lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter][0].uvs.size();
+			auto uvChannelCount = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter][0].uvs.size();
 			aiVector3D** uvsBuffers = new aiVector3D*[uvChannelCount];
 			for (int i = 0; i < uvChannelCount; ++i)
 				uvsBuffers[i] = new aiVector3D[current_mesh_vertex_count];		
 
 			for (int vertexCounter = 0; vertexCounter < current_mesh_vertex_count; ++vertexCounter) {
-				const auto& vertex = mesh.lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter][vertexCounter];
+				const auto& vertex = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter][vertexCounter];
 
 				positionBuffer[vertexCounter].x = vertex.position.x;
 				positionBuffer[vertexCounter].y = vertex.position.y;
@@ -89,10 +89,10 @@ std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 				ai_mesh->mTextureCoords[i] = uvsBuffers[i];
 				ai_mesh->mNumUVComponents[i] = 2;
 			}
-			auto current_mesh_face_count = mesh.lodBuffers[lodCounter].meshFaceContainers[meshCounter].size();
+			auto current_mesh_face_count = mesh->lodBuffers[lodCounter].meshFaceContainers[meshCounter].size();
 			aiFace* faceBuffer = new aiFace[current_mesh_face_count];
 			for (int faceCounter = 0; faceCounter < current_mesh_face_count; ++faceCounter) {
-				const auto& face = mesh.lodBuffers[lodCounter].meshFaceContainers[meshCounter][faceCounter];
+				const auto& face = mesh->lodBuffers[lodCounter].meshFaceContainers[meshCounter][faceCounter];
 				faceBuffer[faceCounter].mNumIndices = 3;
 				faceBuffer[faceCounter].mIndices = new unsigned int[3];
 				faceBuffer[faceCounter].mIndices[0] = face.index1;
@@ -107,7 +107,7 @@ std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 			mesh_counter++;
 		}
 	}
-	scene->mNumMeshes = mesh.meshInfoSection.meshCount;
+	scene->mNumMeshes = mesh->meshInfoSection.meshCount;
 	scene->mMeshes = mesh_buffer;
 
 	aiNode* rootNode = new aiNode;
@@ -131,9 +131,9 @@ std::unique_ptr<aiScene> mesh_to_assimp(const MESH_UNPACKER::Mesh& mesh) {
 	//rootNode->addChildren(mesh.lodBuffers.size(), lodNodes);
 	 
 	 
-	rootNode->mNumMeshes = mesh.meshInfoSection.meshCount;
-	rootNode->mMeshes = new unsigned int[mesh.meshInfoSection.meshCount];
-	for (int i = 0; i < mesh.meshInfoSection.meshCount; ++i)
+	rootNode->mNumMeshes = mesh->meshInfoSection.meshCount;
+	rootNode->mMeshes = new unsigned int[mesh->meshInfoSection.meshCount];
+	for (int i = 0; i < mesh->meshInfoSection.meshCount; ++i)
 		rootNode->mMeshes[i] = i;
 	rootNode->mNumChildren = 0;
 

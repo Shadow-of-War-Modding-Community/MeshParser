@@ -33,26 +33,28 @@ exit(-1)
 			}
 		}
 
-		namespace MESH {
-			namespace TYPES {
-				struct Vector3f {
-					float x, y, z;
-				};
-				
-				using Normal = Vector3f;
-				using Tangent = Vector3f;
-				using Bitangent = Vector3f;
+		namespace GLOBALTYPES {
+			struct Vector3f {
+				float x, y, z;
+			};
 
-				struct Quaternion {
-					float w, x, y, z;
-				};
+			struct Quaternion {
+				float w, x, y, z;
+			};
+		}
+
+		namespace MESH {
+			namespace TYPES {							
+				using Normal = GLOBALTYPES::Vector3f;
+				using Tangent = GLOBALTYPES::Vector3f;
+				using Bitangent = GLOBALTYPES::Vector3f;
 
 				struct Bone {
 					ulong boneID;
 					short parentIndex;
 					ushort childCount;
-					Vector3f translation;
-					Quaternion rotation;
+					GLOBALTYPES::Vector3f translation;
+					GLOBALTYPES::Quaternion rotation;
 					float scale;
 				};
 
@@ -109,12 +111,13 @@ exit(-1)
 				struct Bone {
 					ulong boneNameOffset;
 					bool boneActive;
-					float c21, c22, c23, c11, c12, c13, c14;
+					GLOBALTYPES::Vector3f translation;
+					GLOBALTYPES::Quaternion rotation;
 					ulong childCount;
 					std::string boneName;
 
 					void populate(std::ifstream& skel, std::string& name) {
-						skel.read((char*)this, 40);
+						skel.read((char*)this, 37);
 						boneName = name;
 					}
 				};
@@ -125,5 +128,5 @@ exit(-1)
 }
 
 
-#include "Mesh/mesh.h"
 #include "Skel/skel.h"
+#include "Mesh/mesh.h"
