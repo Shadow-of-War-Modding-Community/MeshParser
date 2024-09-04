@@ -32,11 +32,17 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
 			aiVector3D* tangentsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* bitangentsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiColor4D* colorsBuffer = new aiColor4D[current_mesh_vertex_count];
-			
 			auto uvChannelCount = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter][0].uvs.size();
 			aiVector3D** uvsBuffers = new aiVector3D*[uvChannelCount];
 			for (int i = 0; i < uvChannelCount; ++i)
-				uvsBuffers[i] = new aiVector3D[current_mesh_vertex_count];		
+				uvsBuffers[i] = new aiVector3D[current_mesh_vertex_count];
+
+			//if (mesh->has_skeleton) {
+			//	aiBone* bones = new aiBone[mesh->skeleton->header.boneCount1];
+			//	for (int boneCounter = 0; boneCounter < mesh->skeleton->header.boneCount1; ++boneCounter) {
+			//		bones[boneCounter].
+			//	}
+			//}
 
 			for (int vertexCounter = 0; vertexCounter < current_mesh_vertex_count; ++vertexCounter) {
 				const auto& vertex = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter][vertexCounter];
@@ -110,32 +116,36 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
 	scene->mNumMeshes = mesh->meshInfoSection.meshCount;
 	scene->mMeshes = mesh_buffer;
 
+
 	aiNode* rootNode = new aiNode;
 	rootNode->mName = "RootNode";
-	
-	//mesh_counter = 0;
-	//aiNode** lodNodes = new aiNode*[mesh.lodBuffers.size()];
-	//for (int lodCounter = 0; lodCounter < mesh.lodBuffers.size(); ++lodCounter) {
-	//	lodNodes[lodCounter] = new aiNode;
-	//	lodNodes[lodCounter]->mName = aiString("LOD" + std::to_string(lodCounter + 1));
-	//	lodNodes[lodCounter]->mNumChildren = mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size();
-	//	unsigned int* meshes = new unsigned int[mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
-	//	//aiNode** meshNodes = new aiNode*[mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
-	//	for (int meshCounter = 0; meshCounter < mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
-	//		meshes[meshCounter] = mesh_counter;
-	//		mesh_counter++;
-	//	}
-	//	lodNodes[lodCounter]->mMeshes = meshes;
-	//	//lodNodes[lodCounter]->addChildren(mesh.lodBuffers[lodCounter].meshVertexAttributeContainers.size(), meshNodes);
-	//}
-	//rootNode->addChildren(mesh.lodBuffers.size(), lodNodes);
+	//rootNode->mNumMeshes = mesh->meshInfoSection.meshCount;
+	rootNode->mNumMeshes = 0;
+
+	mesh_counter = 0;
+	aiNode** lodNodes = new aiNode*[mesh->lodBuffers.size()];
+	for (int lodCounter = 0; lodCounter < mesh->lodBuffers.size(); ++lodCounter) {
+		lodNodes[lodCounter] = new aiNode;
+		lodNodes[lodCounter]->mName = aiString("LOD" + std::to_string(lodCounter + 1));
+		lodNodes[lodCounter]->mNumMeshes = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size();
+		unsigned int* meshes = new unsigned int[mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
+		//aiNode** meshNodes = new aiNode*[mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
+		for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+			meshes[meshCounter] = mesh_counter;
+			mesh_counter++;
+		}
+		lodNodes[lodCounter]->mMeshes = meshes;
+
+		//lodNodes[lodCounter]->addChildren(mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(), meshNodes);
+	}
+	rootNode->addChildren(mesh->lodBuffers.size(), lodNodes);
 	 
+
 	 
-	rootNode->mNumMeshes = mesh->meshInfoSection.meshCount;
-	rootNode->mMeshes = new unsigned int[mesh->meshInfoSection.meshCount];
-	for (int i = 0; i < mesh->meshInfoSection.meshCount; ++i)
-		rootNode->mMeshes[i] = i;
-	rootNode->mNumChildren = 0;
+
+	//rootNode->mMeshes = new unsigned int[mesh->meshInfoSection.meshCount];
+	//for (int i = 0; i < mesh->meshInfoSection.meshCount; ++i)
+	//	rootNode->mMeshes[i] = i;
 
 
 	scene->mRootNode = rootNode;

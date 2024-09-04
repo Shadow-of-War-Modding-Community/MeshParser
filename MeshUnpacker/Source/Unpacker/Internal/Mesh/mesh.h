@@ -1,7 +1,7 @@
 #pragma once
 #include "../includes-types-defs.h"
 
-//FRWDDEC
+// FORWARD
 namespace MESH_UNPACKER::INTERNAL::SKEL {
 	struct Skeleton;
 }
@@ -261,7 +261,7 @@ namespace MESH_UNPACKER {
 		INTERNAL::MESH::MeshInfoSection meshInfoSection{};
 		INTERNAL::MESH::MeshDataSection meshDataSection{};
 
-		INTERNAL::SKEL::Skeleton skeleton{};
+		std::shared_ptr<INTERNAL::SKEL::Skeleton> skeleton = std::make_shared<INTERNAL::SKEL::Skeleton>();
 
 		std::vector<INTERNAL::MESH::LODBuffer> lodBuffers;
 	};

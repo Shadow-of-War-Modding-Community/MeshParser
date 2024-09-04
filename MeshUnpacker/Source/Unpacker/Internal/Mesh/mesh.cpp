@@ -261,8 +261,8 @@ void MESH_UNPACKER::MeshLoader::load(const std::string& mesh_file_name, const st
 
 	if (skel_file_name != "") {
 		std::ifstream skel_file(skel_file_name, std::ios::binary);
-		mesh->skeleton.header.populate(skel_file);
-		mesh->skeleton.boneSection.populate(skel_file, mesh->skeleton.header);
+		mesh->skeleton->header.populate(skel_file);
+		mesh->skeleton->boneSection.populate(skel_file, mesh->skeleton->header);
 		mesh->has_skeleton = true;
 	}
 
