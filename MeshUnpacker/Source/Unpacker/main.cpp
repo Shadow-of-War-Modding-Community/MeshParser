@@ -16,6 +16,7 @@ int main() {
 	//auto rM = assimp_to_mesh(scene);
 
 	Assimp::Exporter exporter;
+	
 	if (exporter.Export(scene.get(), "fbx", "F:\\out.fbx") != AI_SUCCESS) {
 		std::cout << exporter.GetErrorString();
 		//error(exporter.GetErrorString());

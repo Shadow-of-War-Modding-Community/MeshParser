@@ -12,7 +12,7 @@
 #include <assimp/Exporter.hpp>
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
-
+#include <assimp/postprocess.h>
 
 namespace MESH_UNPACKER {
 #define read_ulong(dst, hndl) hndl.read((char*)&dst, sizeof(ulong))
@@ -67,14 +67,14 @@ exit(-1)
 				};
 
 				union Weights{
-					byte weight[4];
+					byte weights[4];
 					struct {
 						byte weight1, weight2, weight3, weight4;
 					};
 				};
 
 				union VertexGroups{
-					byte vertexGroupIndex[4];
+					byte vertexGroupIndices[4];
 					struct {
 						byte vertexGroupIndex1, vertexGroupIndex2, vertexGroupIndex3, vertexGroupIndex4;
 					};
