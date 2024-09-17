@@ -28,17 +28,12 @@ MESH_UNPACKER::INTERNAL::SKEL::Header::~Header() {
 }
 
 void MESH_UNPACKER::INTERNAL::SKEL::BoneSection::populate(std::ifstream& skel, Header& header) {
-
-	auto getNextString = [&]() -> std::string {
+	auto make_bone_name = [&](int offset) -> std::string {
 		std::string readString;
-		for (;;) {
-			char tmp;
-			skel.read(&tmp, 1);
-			if (tmp == '\0') {
-				readString += tmp;
+		for (int i = offset;; ++i) {
+			readString += boneNameBuffer[i];
+			if (boneNameBuffer[i] == '\0')
 				return readString;
-			}
-			readString += tmp;
 		}
 	};
 
@@ -51,13 +46,21 @@ void MESH_UNPACKER::INTERNAL::SKEL::BoneSection::populate(std::ifstream& skel, H
 	char useless;
 	skel.read(&useless, 1);
 
-	for (int boneCounter = 0; boneCounter < header.boneCount1; ++boneCounter)
-		boneNames.push_back(getNextString());
+	for (int boneCounter = 0; boneCounter < header.boneCount1;) {
+		char tmp;
+		skel.read(&tmp, 1);
+		if (tmp == '\0') {
+			boneCounter++;
+		}
+		boneNameBuffer.push_back(tmp);
+	}
 
 	skel.seekg((ulong)backup + header.boneNameSecSize + 4, std::ios_base::beg); // Seek here is absolutely not the typical way to go...
 
 	bones = new TYPES::Bone[header.boneCount1];
 
-	for (int boneCounter = 0; boneCounter < header.boneCount1; ++boneCounter)
-		bones[boneCounter].populate(skel, boneNames[boneCounter]);
+	for (int boneCounter = 0; boneCounter < header.boneCount1; ++boneCounter) {
+		bones[boneCounter].populate(skel);
+		bones[boneCounter].boneName = make_bone_name(bones[boneCounter].boneNameOffset - 1);
+	}
 }

@@ -22,7 +22,7 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
 
     // Convert a bone's transformation to a 4x4 matrix
     auto bone_transforms_to_mat4x4 = [](const MESH_UNPACKER::INTERNAL::MESH::TYPES::Bone& bone) {
-        aiQuaternion quat(bone.rotation.w, bone.rotation.x, bone.rotation.y, bone.rotation.z);
+        aiQuaternion quat(bone.rotation.x, bone.rotation.y, bone.rotation.z, bone.rotation.w);
         aiMatrix4x4 rotationMatrix = aiMatrix4x4(quat.GetMatrix());
 
         // Apply the translation to the matrix
@@ -36,7 +36,7 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
     // Compute the inverse of the bone's transformation (bind-pose offset matrix)
     auto compute_bone_offset_matrix = [&](const MESH_UNPACKER::INTERNAL::MESH::TYPES::Bone& bone) {
         aiMatrix4x4 transform = bone_transforms_to_mat4x4(bone);
-        return transform.Inverse();  // Inverse matrix represents the offset to the bone space
+        return transform;  // Inverse matrix represents the offset to the bone space
         };
 
     int mesh_counter = 0;
@@ -184,21 +184,21 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
 
     // Set up the root node and bone hierarchy
     aiNode* rootNode = new aiNode;
-    rootNode->mNumMeshes = 0;
+    rootNode->mNumMeshes = mesh->meshInfoSection.meshCount;
+    rootNode->mName = "RootNode";
 
     std::vector<aiNode*> nodes(mesh->skeleton->header.boneCount1);
     for (int i = 0; i < mesh->skeleton->header.boneCount1; ++i) {
         aiNode* node = new aiNode();
         node->mName = aiString(mesh->skeleton->boneSection.bones[i].boneName);
-        //node->mTransformation = bone_transforms_to_mat4x4(mesh->meshInfoSection.boneSection.bones[i]);
-        //node->mTransformation = compute_bone_offset_matrix(mesh->meshInfoSection.boneSection.bones[i]);
+        node->mTransformation = bone_transforms_to_mat4x4(mesh->meshInfoSection.boneSection.bones[i]);
         nodes[i] = node;
     }
 
     for (int i = 0; i < mesh->skeleton->header.boneCount1; ++i) {
         auto parent_index = mesh->meshInfoSection.boneSection.bones[i].parentIndex;
         if (parent_index == -1) {
-            rootNode = nodes[i];
+            rootNode->addChildren(1, &nodes[i]);
         }
         else {
             nodes[parent_index]->addChildren(1, &nodes[i]);
@@ -206,21 +206,25 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
     }
 
     // Set LOD nodes as children of the root node
-    mesh_counter = 0;
-    aiNode** lodNodes = new aiNode * [mesh->lodBuffers.size()];
-    for (int lodCounter = 0; lodCounter < mesh->lodBuffers.size(); ++lodCounter) {
-        lodNodes[lodCounter] = new aiNode;
-        lodNodes[lodCounter]->mName = aiString("LOD " + std::to_string(lodCounter + 1));
-        lodNodes[lodCounter]->mNumMeshes = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size();
-        unsigned int* meshes = new unsigned int[mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
-        for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
-            meshes[meshCounter] = mesh_counter;
-            mesh_counter++;
-        }
-        lodNodes[lodCounter]->mMeshes = meshes;
-    }
-    rootNode->addChildren(mesh->lodBuffers.size(), lodNodes);
+    //mesh_counter = 0;
+    //aiNode** lodNodes = new aiNode * [mesh->lodBuffers.size()];
+    //for (int lodCounter = 0; lodCounter < mesh->lodBuffers.size(); ++lodCounter) {
+    //    lodNodes[lodCounter] = new aiNode;
+    //    lodNodes[lodCounter]->mName = aiString("LOD " + std::to_string(lodCounter + 1));
+    //    lodNodes[lodCounter]->mNumMeshes = mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size();
+    //    unsigned int* meshes = new unsigned int[mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size()];
+    //    for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+    //        meshes[meshCounter] = mesh_counter;
+    //        mesh_counter++;
+    //    }
+    //    lodNodes[lodCounter]->mMeshes = meshes;
+    //}
+    //rootNode->addChildren(mesh->lodBuffers.size(), lodNodes);
+    unsigned int* meshNr = new unsigned int[mesh->meshInfoSection.meshCount];
+    for (int i = 0; i < mesh->meshInfoSection.meshCount; ++i)
+        meshNr[i] = i;
 
+    rootNode->mMeshes = meshNr;
     scene->mRootNode = rootNode;
     scene->mNumMaterials = 1;
     scene->mMaterials = new aiMaterial * [1] {material};

@@ -116,9 +116,9 @@ exit(-1)
 					ulong childCount;
 					std::string boneName;
 
-					void populate(std::ifstream& skel, std::string& name) {
-						skel.read((char*)this, 37);
-						boneName = name;
+					// The boneName has to be populated separately!!!
+					void populate(std::ifstream& skel) {
+						skel.read((char*)this, 37); 
 					}
 				};
 #pragma pack(pop)
