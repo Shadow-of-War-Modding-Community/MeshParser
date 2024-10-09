@@ -152,7 +152,7 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 						va.uvs.push_back(std::make_pair(tmpUV, false));
 						virtual_vertex_buffer_offset += sizeof(TYPES::UV);
 					}
-					else if (attributeLayout.type == Type::VECTOR216) {
+					else if (attributeLayout.type == Type::VECTOR2S16) {
 						short* uv = (short*)(vertexbuffer + virtual_vertex_buffer_offset);
 						TYPES::UV tmpUV;
 						tmpUV.u = uv[0];

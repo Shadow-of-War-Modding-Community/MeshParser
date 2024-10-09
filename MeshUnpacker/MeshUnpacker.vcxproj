@@ -143,8 +143,9 @@
     <ClInclude Include="Source\Unpacker\Internal\Skel\skel.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Unpacker\Exporter\exporter.cpp" />
-    <ClCompile Include="Source\Unpacker\Repacker\repacker.cpp" />
+    <ClCompile Include="Source\Unpacker\Functional\export.cpp" />
+    <ClCompile Include="Source\Unpacker\Functional\mesh_to_assimp.cpp" />
+    <ClCompile Include="Source\Unpacker\Functional\assimp_to_mesh.cpp" />
     <ClCompile Include="Source\Unpacker\Internal\Mesh\mesh.cpp" />
     <ClCompile Include="Source\Unpacker\Internal\Mesh\meshInfoSection.cpp" />
     <ClCompile Include="Source\Unpacker\Internal\Skel\skel.cpp" />

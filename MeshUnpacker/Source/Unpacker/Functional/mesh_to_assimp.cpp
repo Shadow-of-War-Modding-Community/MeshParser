@@ -20,24 +20,29 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
     float shininess = 20.0f;
     material->AddProperty(&shininess, 1, AI_MATKEY_SHININESS);
 
-    // Convert a bone's transformation to a 4x4 matrix
-    auto bone_transforms_to_mat4x4 = [](const MESH_UNPACKER::INTERNAL::MESH::TYPES::Bone& bone) {
-        aiQuaternion quat(bone.rotation.x, bone.rotation.y, bone.rotation.z, bone.rotation.w);
-        aiMatrix4x4 rotationMatrix = aiMatrix4x4(quat.GetMatrix());
+    auto translation_matrix = [](const MESH_UNPACKER::INTERNAL::MESH::TYPES::Bone& bone, const aiMatrix4x4& parentMatrix) {
+       
+        aiMatrix4x4 rotation = aiMatrix4x4();
+        aiMatrix4x4 trans = aiMatrix4x4();
+        aiMatrix4x4 result = aiMatrix4x4();
+        
+        //aiQuaternion quaternion = aiQuaternion(bone.rotation.w, bone.rotation.x, bone.rotation.z, bone.rotation.y);
+        //rotation = aiMatrix4x4(quaternion.GetMatrix());
+        aiMatrix4x4::Translation(aiVector3D(bone.translation.x, bone.translation.z, bone.translation.y), trans);
 
-        // Apply the translation to the matrix
-        rotationMatrix.a4 = bone.translation.x;
-        rotationMatrix.b4 = bone.translation.y;
-        rotationMatrix.c4 = bone.translation.z;
+        result = trans * rotation;
+        return result;
+    };
 
-        return rotationMatrix;
-        };
+    auto inverse = [&](const MESH_UNPACKER::INTERNAL::MESH::TYPES::Bone& bone, const aiMatrix4x4& parentMatrix) {
+        auto mat = translation_matrix(bone, parentMatrix);
+        return mat.Inverse();
+    };
 
-    // Compute the inverse of the bone's transformation (bind-pose offset matrix)
-    auto compute_bone_offset_matrix = [&](const MESH_UNPACKER::INTERNAL::MESH::TYPES::Bone& bone) {
-        aiMatrix4x4 transform = bone_transforms_to_mat4x4(bone);
-        return transform;  // Inverse matrix represents the offset to the bone space
-        };
+
+    aiNode* rootNode = new aiNode;
+    rootNode->mNumMeshes = mesh->meshInfoSection.meshCount;
+    rootNode->mName = "RootNode";
 
     int mesh_counter = 0;
     aiMesh** mesh_buffer = new aiMesh * [mesh->meshInfoSection.meshCount];
@@ -64,9 +69,11 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
                     auto bone = mesh->skeleton->boneSection.bones[boneCounter];
                     bones[boneCounter] = new aiBone();
                     bones[boneCounter]->mName = bone.boneName;
-                    bones[boneCounter]->mOffsetMatrix = compute_bone_offset_matrix(mesh->meshInfoSection.boneSection.bones[boneCounter]);
+                    //bones[boneCounter]->mOffsetMatrix = compute_bone_offset_matrix(mesh->meshInfoSection.boneSection.bones[boneCounter]);
                 }
             }
+            else
+                delete[] bones;
 
             // Process vertices and attributes
             for (int vertexCounter = 0; vertexCounter < current_mesh_vertex_count; ++vertexCounter) {
@@ -170,9 +177,9 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
                     bones[currentVertexGroup]->mWeights = new aiVertexWeight[weights.size()];
                     std::copy(weights.begin(), weights.end(), bones[currentVertexGroup]->mWeights);
                 }
-            }
-            ai_mesh->mBones = bones;
-            ai_mesh->mNumBones = mesh->skeleton->header.boneCount1;
+                ai_mesh->mBones = bones;
+                ai_mesh->mNumBones = mesh->skeleton->header.boneCount1;
+            }       
 
             ai_mesh->mMaterialIndex = 0;
             mesh_buffer[mesh_counter] = ai_mesh;
@@ -182,29 +189,33 @@ std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Mesh> mes
     scene->mNumMeshes = mesh->meshInfoSection.meshCount;
     scene->mMeshes = mesh_buffer;
 
-    // Set up the root node and bone hierarchy
-    aiNode* rootNode = new aiNode;
-    rootNode->mNumMeshes = mesh->meshInfoSection.meshCount;
-    rootNode->mName = "RootNode";
-
-    std::vector<aiNode*> nodes(mesh->skeleton->header.boneCount1);
-    for (int i = 0; i < mesh->skeleton->header.boneCount1; ++i) {
-        aiNode* node = new aiNode();
-        node->mName = aiString(mesh->skeleton->boneSection.bones[i].boneName);
-        node->mTransformation = bone_transforms_to_mat4x4(mesh->meshInfoSection.boneSection.bones[i]);
-        nodes[i] = node;
-    }
-
-    for (int i = 0; i < mesh->skeleton->header.boneCount1; ++i) {
-        auto parent_index = mesh->meshInfoSection.boneSection.bones[i].parentIndex;
-        if (parent_index == -1) {
-            rootNode->addChildren(1, &nodes[i]);
+    if (mesh->has_skeleton) {
+        std::vector<aiNode*> nodes(mesh->skeleton->header.boneCount1);
+        for (int i = 0; i < mesh->skeleton->header.boneCount1; ++i) {
+            aiNode* node = new aiNode();
+            node->mName = aiString(mesh->skeleton->boneSection.bones[i].boneName);
+            nodes[i] = node;
         }
-        else {
-            nodes[parent_index]->addChildren(1, &nodes[i]);
+
+        for (int i = 0; i < mesh->skeleton->header.boneCount1; ++i) {
+            auto parent_index = mesh->meshInfoSection.boneSection.bones[i].parentIndex;
+            if (parent_index == -1) {
+                aiMatrix4x4 identity = aiMatrix4x4();
+                nodes[i]->mTransformation = translation_matrix(mesh->meshInfoSection.boneSection.bones[i], identity);
+                //for (int j = 0; j < mesh_counter; ++j) {
+                //    scene->mMeshes[j]->mBones[i]->mOffsetMatrix = translation_matrix(mesh->meshInfoSection.boneSection.bones[i], identity);
+                //}
+                rootNode->addChildren(1, &nodes[i]);
+            }
+            else {
+                nodes[i]->mTransformation = translation_matrix(mesh->meshInfoSection.boneSection.bones[i], nodes[parent_index]->mTransformation);
+                //for (int j = 0; j < mesh_counter; ++j) {
+                //    scene->mMeshes[j]->mBones[i]->mOffsetMatrix = translation_matrix(mesh->meshInfoSection.boneSection.bones[i], nodes[parent_index]->mTransformation);
+                //}
+                nodes[parent_index]->addChildren(1, &nodes[i]);
+            }
         }
     }
-
     // Set LOD nodes as children of the root node
     //mesh_counter = 0;
     //aiNode** lodNodes = new aiNode * [mesh->lodBuffers.size()];
