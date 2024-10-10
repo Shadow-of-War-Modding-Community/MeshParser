@@ -5,6 +5,10 @@ extern std::shared_ptr<aiScene> mesh_to_assimp(std::shared_ptr<MESH_UNPACKER::Me
 
 extern std::shared_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh_ref(std::shared_ptr<aiScene> scene, std::shared_ptr<MESH_UNPACKER::Mesh> mesh);
 
+extern void export_mesh(std::shared_ptr<MESH_UNPACKER::Mesh> mesh, const char* name);
+
+extern void export_assimp(std::shared_ptr<aiScene> scene, const char* format, const char* name);
+
 //int main() {
 //	MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelweapons\\sauron\\1h_blunt\\sauron_flangedmace\\sauron_flangedmace.mesh", "F:\\Sow\\unpacked-game\\characters\\modelweapons\\sauron\\1h_blunt\\sauron_flangedmace\\sauron_flangedmace.skel");
 //	//MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelcharacters\\balrog\\balrog_base.mesh", "F:\\Sow\\unpacked-game\\characters\\modelcharacters\\balrog\\balrog_base.skel");
@@ -27,9 +31,18 @@ int main() {
 	MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelweapons\\sauron\\1h_blunt\\sauron_flangedmace\\sauron_flangedmace.mesh");
 	auto m = mesh.getMesh();
 
-	auto scene = mesh_to_assimp(m);
+	export_mesh(m, "F:\\mesh.mesh");
 
-	assimp_to_mesh_ref(scene, m);
+	MESH_UNPACKER::MeshLoader mesh2("F:\\mesh.mesh");
+
+	auto m2 = mesh2.getMesh();
+
+	auto scene = mesh_to_assimp(m2);
+
+	export_assimp(scene, "fbx", "F:\\out2.fbx");
+	//auto scene = mesh_to_assimp(m);
+
+	//assimp_to_mesh_ref(scene, m);
 }
 
 //int main() {
