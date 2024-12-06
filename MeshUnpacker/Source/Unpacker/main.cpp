@@ -28,18 +28,13 @@ extern void export_assimp(std::shared_ptr<aiScene> scene, const char* format, co
 //}
 
 int main() {
-	MESH_UNPACKER::MeshLoader mesh("F:\\Sow\\unpacked-game\\characters\\modelweapons\\sauron\\1h_blunt\\sauron_flangedmace\\sauron_flangedmace.mesh");
+	MESH_UNPACKER::MeshLoader mesh("F:\\balrog_base.mesh");
 	auto m = mesh.getMesh();
 
-	export_mesh(m, "F:\\mesh.mesh");
 
-	MESH_UNPACKER::MeshLoader mesh2("F:\\mesh.mesh");
+	auto scene = mesh_to_assimp(m);
 
-	auto m2 = mesh2.getMesh();
-
-	auto scene = mesh_to_assimp(m2);
-
-	export_assimp(scene, "fbx", "F:\\out2.fbx");
+	assimp_to_mesh_ref(scene, m);
 	//auto scene = mesh_to_assimp(m);
 
 	//assimp_to_mesh_ref(scene, m);

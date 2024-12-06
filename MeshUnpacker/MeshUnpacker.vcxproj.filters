@@ -15,40 +15,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Unpacker\Internal\half.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Unpacker\Internal\Mesh\mesh.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Unpacker\Internal\Skel\skel.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Unpacker\Internal\includes-types-defs.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
+    <ClCompile Include="newSource\main.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="newSource\Parser\Mesh\mesh.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Unpacker\main.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Unpacker\Internal\Skel\skel.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Unpacker\Internal\Mesh\mesh.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Unpacker\Internal\Mesh\meshInfoSection.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Unpacker\Functional\mesh_to_assimp.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Unpacker\Functional\assimp_to_mesh.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Unpacker\Functional\export.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
+    <ClInclude Include="newSource\Parser\Mesh\mesh.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="newSource\Parser\includes-types.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="newSource\Parser\half.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

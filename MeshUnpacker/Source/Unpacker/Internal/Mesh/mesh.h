@@ -53,7 +53,7 @@ namespace MESH_UNPACKER {
 			struct LodInfo {
 				ulong vertexDataSize;
 				ulong faceDataSize;
-				ulong VertexGroupDataSize;
+				ulong vertexGroupDataSize;
 				ulong meshCount;
 				ushort faceCount[16];
 			};
@@ -225,9 +225,9 @@ namespace MESH_UNPACKER {
 		struct MeshDataSection {
 			ulong sectionID; // 0x95DBDB69
 
-			std::vector<byte*> vertexDataSections;
-			std::vector<byte*> faceDataSections;
-			std::vector<byte*> vertexGroupDataSections;
+			std::vector<std::vector<byte>> vertexDataSections;
+			std::vector<std::vector<byte>> faceDataSections;
+			std::vector<std::vector<byte>> vertexGroupDataSections;
 
 			MeshDataSection() = default;
 
@@ -239,6 +239,7 @@ namespace MESH_UNPACKER {
 		};
 
 		struct BufferLayout {
+			ulong size;
 			std::vector<MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout> order;
 
 			void populate(MeshInfoSection&, int);
@@ -249,7 +250,7 @@ namespace MESH_UNPACKER {
 			std::vector<std::vector<TYPES::Face>> meshFaceContainers;
 			std::vector<std::vector<byte>> meshVertexGroupContainers;
 
-			void populate(MeshInfoSection&, MeshDataSection&, const std::vector<INTERNAL::MESH::BufferLayout>&, int, int);
+			void populate(MeshInfoSection&, MeshDataSection&, std::vector<INTERNAL::MESH::BufferLayout>&, int, int);
 		};
 	}
 
@@ -261,6 +262,8 @@ namespace MESH_UNPACKER {
 		INTERNAL::MESH::MeshInfoSection meshInfoSection{};
 		INTERNAL::MESH::MeshDataSection meshDataSection{};
 
+		std::vector<INTERNAL::MESH::BufferLayout> bufferLayouts;
+
 		std::shared_ptr<INTERNAL::SKEL::Skeleton> skeleton = std::make_shared<INTERNAL::SKEL::Skeleton>();
 
 		std::vector<INTERNAL::MESH::LODBuffer> lodBuffers;
@@ -270,8 +273,6 @@ namespace MESH_UNPACKER {
 		bool load_once = false;
 
 		std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
-
-		std::vector<INTERNAL::MESH::BufferLayout> bufferLayouts;
 
 	public:
 

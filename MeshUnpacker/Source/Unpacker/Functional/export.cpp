@@ -72,13 +72,13 @@ void export_mesh(std::shared_ptr<MESH_UNPACKER::Mesh> mesh, const char* name) {
 	write_ulong(dataSection.sectionID);
 
 	for (int i = 0; i < descSection.dataSectionCount; ++i) {
-		file.write((char*)dataSection.vertexDataSections[i], descSection.vertexDataSectionSizes[i]);
+		file.write((char*)dataSection.vertexDataSections[i].data(), descSection.vertexDataSectionSizes[i]);
 	}
 	for (int i = 0; i < descSection.dataSectionCount; ++i) {
-		file.write((char*)dataSection.faceDataSections[i], descSection.faceDataSectionSizes[i]);
+		file.write((char*)dataSection.faceDataSections[i].data(), descSection.faceDataSectionSizes[i]);
 	}
 	for (int i = 0; i < descSection.dataSectionCount; ++i) {
-		file.write((char*)dataSection.vertexGroupDataSections[i], descSection.vertexGroupDataSectionSizes[i]);
+		file.write((char*)dataSection.vertexGroupDataSections[i].data(), descSection.vertexGroupDataSectionSizes[i]);
 	}
 	file.close();
 }

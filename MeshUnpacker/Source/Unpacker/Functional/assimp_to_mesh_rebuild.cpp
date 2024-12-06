@@ -23,19 +23,43 @@ void error_checks(aiMesh* mesh) {
 
 }
 
-void create_mesh_header(std::shared_ptr<MESH_UNPACKER::Mesh> newMesh) {
-
-}
-
-void create_mesh_desc_section(std::shared_ptr<MESH_UNPACKER::Mesh> newMesh) {
+void edit_mesh_header(std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
 	using namespace MESH_UNPACKER::INTERNAL::MESH;
-}
-
-void create_mesh_info_section(std::shared_ptr<MESH_UNPACKER::Mesh> newMesh) {
 
 }
 
-void create_mesh_data_section(std::shared_ptr<MESH_UNPACKER::Mesh> newMesh, std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
+void edit_mesh_desc_section(std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
+	using namespace MESH_UNPACKER::INTERNAL::MESH;
+
+}
+
+void edit_mesh_info_section(std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
+	using namespace MESH_UNPACKER::INTERNAL::MESH;
+	for (int i = 0; i < mesh->meshInfoSection.lodCount; ++i) {
+		mesh->meshInfoSection.lodInfos[i].faceDataSize = mesh->meshDataSection.faceDataSections[i].size();
+		mesh->meshInfoSection.lodInfos[i].vertexDataSize = mesh->meshDataSection.vertexDataSections[i].size();
+		for (int j = 0; j < 16; ++j) {
+			mesh->meshInfoSection.lodInfos[i].faceCount[j] = mesh->meshDataSection.faceDataSections[i].size() / 6;
+		}
+	}
+	int global_mesh_counter = 0;
+	for (int lodCounter = 0; lodCounter < mesh->meshInfoSection.lodCount; ++lodCounter) {
+		for (int meshCounter = 0; meshCounter < mesh->meshInfoSection.lodInfos[lodCounter].meshCount; ++meshCounter) {
+			if (meshCounter == 0) 
+				mesh->meshInfoSection.meshInfos[global_mesh_counter].dataOffset = 0;
+			else {
+				mesh->meshInfoSection.meshInfos[global_mesh_counter].dataOffset = 0;
+				for (int lod_mesh_counter = 1; lod_mesh_counter <= meshCounter; ++lod_mesh_counter) {
+					mesh->meshInfoSection.meshInfos[global_mesh_counter].dataOffset
+						+= mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter - lod_mesh_counter].size() * mesh->bufferLayouts[global_mesh_counter - lod_mesh_counter].size;
+				}
+			}
+			global_mesh_counter++;
+		}
+	}
+}
+
+void create_mesh_data_section(std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
 	using namespace MESH_UNPACKER::INTERNAL::MESH;
 	using AttributeLayout = MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout;
 	using Attribute = AttributeLayout::Attribute;
@@ -110,8 +134,8 @@ void create_mesh_data_section(std::shared_ptr<MESH_UNPACKER::Mesh> newMesh, std:
 					u = (short)(vertAt.uvs[uv_counter].first.u * 32767.f);
 					v = (short)(1.f - vertAt.uvs[uv_counter].first.v * 32767.f);
 					uv_counter++;
-					buffer->resize(buffer->size() + sizeof(TYPES::UV)); // same size for S16 format...
-					byte* bufferEnd = buffer->data() + buffer->size() - sizeof(TYPES::UV);
+					buffer->resize(buffer->size() + 4); // 2 times size of short
+					byte* bufferEnd = buffer->data() + buffer->size() - 4;
 					memcpy(bufferEnd, &u, sizeof(short));
 					memcpy(bufferEnd + 2, &v, sizeof(short));
 				}
@@ -170,38 +194,42 @@ void create_mesh_data_section(std::shared_ptr<MESH_UNPACKER::Mesh> newMesh, std:
 			}
 			}
 	};
-	// Get the buffer layouts again...
-	std::vector<BufferLayout> bufferLayouts{};
-	for (int i = 0; i < mesh->meshInfoSection.bufferLayoutCount; ++i) {
-		bufferLayouts.push_back(BufferLayout{});
-		bufferLayouts[i].populate(mesh->meshInfoSection, i);
-	}
-	std::vector<byte> meshDataSection;
 	int mesh_counted = 0;
-	for (int lodCounter = 0; lodCounter < newMesh->lodBuffers.size(); ++lodCounter) {
-		for (int meshCounter = 0; meshCounter < newMesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
-			auto current_layer_index = mesh->meshInfoSection.meshInfos[mesh_counted].layerIndex; // Only use the layers of the old mesh...
-			for (int vertexCounter = 0; vertexCounter < newMesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].size(); ++vertexCounter) {
-				for (auto& attribute : bufferLayouts[current_layer_index].order) {
-					parse_attribute(&meshDataSection, attribute, Buffer::Buffer_0, lodCounter, meshCounter, vertexCounter);
+	for (int lodCounter = 0; lodCounter < mesh->lodBuffers.size(); ++lodCounter) {
+		mesh->meshDataSection.vertexDataSections.push_back(std::vector<byte>{});
+		for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+			auto current_layer_index = mesh->meshInfoSection.meshInfos[mesh_counted].layerIndex;
+			for (int vertexCounter = 0; vertexCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].size(); ++vertexCounter) {
+				for (auto& attribute : mesh->bufferLayouts[current_layer_index].order) {
+					parse_attribute(&mesh->meshDataSection.vertexDataSections[lodCounter], attribute, Buffer::Buffer_0, lodCounter, meshCounter, vertexCounter);
 				}
+				uv_counter = 0; // Buffer 0 shouldnt contain any UVs. Its there just in case
 			}
-			for (int vertexCounter = 0; vertexCounter < newMesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].size(); ++vertexCounter) {
-				for (auto& attribute : bufferLayouts[current_layer_index].order) {
-					parse_attribute(&meshDataSection, attribute, Buffer::Buffer_1, lodCounter, meshCounter, vertexCounter);
+			for (int vertexCounter = 0; vertexCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].size(); ++vertexCounter) {
+				for (auto& attribute : mesh->bufferLayouts[current_layer_index].order) {
+					parse_attribute(&mesh->meshDataSection.vertexDataSections[lodCounter], attribute, Buffer::Buffer_1, lodCounter, meshCounter, vertexCounter);
 				}
+				uv_counter = 0;  // This is the index of the vertexAttributes uv channel. Max is 2 so it has to be reset to 0 after each vertexAttribute parsing
 			}
-
 			mesh_counted++;
+		}
+	}
+	mesh_counted = 0;
+	for (int lodCounter = 0; lodCounter < mesh->lodBuffers.size(); ++lodCounter) {
+		mesh->meshDataSection.faceDataSections.push_back(std::vector<byte>{});
+		for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+			for (int faceCounter = 0; faceCounter < mesh->lodBuffers[lodCounter].meshFaceContainers[meshCounter].size(); ++faceCounter) {
+				mesh->meshDataSection.faceDataSections[lodCounter].resize(mesh->meshDataSection.faceDataSections[lodCounter].size() + sizeof(TYPES::Face));
+				 byte* end = mesh->meshDataSection.faceDataSections[lodCounter].data() + mesh->meshDataSection.faceDataSections[lodCounter].size() - sizeof(TYPES::Face);
+				 memcpy(end, &mesh->lodBuffers[lodCounter].meshFaceContainers[meshCounter][faceCounter], sizeof(TYPES::Face));
+			}
 		}
 	}
 
 }
 
+// Will modify the input mesh!!! VertexGroups and Bones are NOT covered here
 std::shared_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh_ref(std::shared_ptr<aiScene> scene, std::shared_ptr<MESH_UNPACKER::Mesh> mesh) {
-	// This is just a very raw idea and implementation. sub functions, additional structs and overall more abstraction is very likely
-	// For now, keep the mesh structure -> LOD count, mesh count in each LOD. Will be changed later when everything is discovered
-
 	using namespace MESH_UNPACKER::INTERNAL::MESH;
 	using namespace MESH_UNPACKER;
 	
@@ -212,16 +240,21 @@ std::shared_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh_ref(std::shared_ptr<aiScene>
 		error("Mesh count is not equal in scene and reference mesh file");
 	}
 
-	auto newMesh = std::make_shared<Mesh>();
 
-	// Here just recreating the structure of the reference mesh, filling the new mesh with the actual data of the scene
+	// Very bad practice but this allows me to not implement copy constructors for all the stupid structures/sub structures
+	// The original mesh will just be modified
+	std::vector<LODBuffer>().swap(mesh->lodBuffers); // Remove the lod buffers
+	// Remove everything from the data section except for the vertex groups, as they arent important for stiff objects and can be kept unchanged
+	std::vector<std::vector<byte>>().swap(mesh->meshDataSection.vertexDataSections);
+	std::vector<std::vector<byte>>().swap(mesh->meshDataSection.faceDataSections);
 
+	// Populate the lod buffers with the data from the assimp scene
 	int assimp_mesh_counter = 0;
 	for (int lodCounter = 0; lodCounter < mesh->meshInfoSection.lodCount; ++lodCounter) {
-		newMesh->lodBuffers.push_back(LODBuffer{});
+		mesh->lodBuffers.push_back(LODBuffer{});
 		error_checks(scene->mMeshes[assimp_mesh_counter]);
-		for (int meshCounter = 0; meshCounter < mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
-			newMesh->lodBuffers[lodCounter].meshVertexAttributeContainers.push_back(std::vector<TYPES::VertexAttribute>{});
+		for (int meshCounter = 0; meshCounter < mesh->meshInfoSection.lodInfos[lodCounter].meshCount; ++meshCounter) {
+			mesh->lodBuffers[lodCounter].meshVertexAttributeContainers.push_back(std::vector<TYPES::VertexAttribute>{});
 			for (int vertexAttributeCounter = 0; vertexAttributeCounter < scene->mMeshes[assimp_mesh_counter]->mNumVertices; ++vertexAttributeCounter) {
 				TYPES::VertexAttribute vertexAttribute;
 				vertexAttribute.position.x = scene->mMeshes[assimp_mesh_counter]->mVertices[vertexAttributeCounter].x;
@@ -251,11 +284,6 @@ std::shared_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh_ref(std::shared_ptr<aiScene>
 				vertexAttribute.vertexGroups.vertexGroupIndex3 = 0;
 				vertexAttribute.vertexGroups.vertexGroupIndex4 = 0;
 
-				//vertexAttribute.color.r = (byte)(scene->mMeshes[meshCounter]->mColors[vertexAttributeCounter]->r * 255.f);
-				//vertexAttribute.color.g = (byte)(scene->mMeshes[meshCounter]->mColors[vertexAttributeCounter]->g * 255.f);
-				//vertexAttribute.color.b = (byte)(scene->mMeshes[meshCounter]->mColors[vertexAttributeCounter]->b * 255.f);
-				//vertexAttribute.color.a = (byte)(scene->mMeshes[meshCounter]->mColors[vertexAttributeCounter]->a * 255.f);
-
 				vertexAttribute.color.r = 255;
 				vertexAttribute.color.g = 255;
 				vertexAttribute.color.b = 255;
@@ -265,12 +293,12 @@ std::shared_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh_ref(std::shared_ptr<aiScene>
 					// Assuming that the fbx will use floats instead of those fucking shorts...
 					TYPES::UV tmpUV;
 					tmpUV.u = scene->mMeshes[assimp_mesh_counter]->mTextureCoords[i][vertexAttributeCounter].x;
-					tmpUV.v = 1.f - scene->mMeshes[assimp_mesh_counter]->mTextureCoords[i][vertexAttributeCounter].y;
+					tmpUV.v = scene->mMeshes[assimp_mesh_counter]->mTextureCoords[i][vertexAttributeCounter].y;
 					vertexAttribute.uvs.push_back(std::make_pair(tmpUV, false)); // false = float
 				}
-				newMesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].push_back(vertexAttribute);
+				mesh->lodBuffers[lodCounter].meshVertexAttributeContainers[meshCounter].push_back(vertexAttribute);
 			}
-			newMesh->lodBuffers[lodCounter].meshFaceContainers.push_back(std::vector<TYPES::Face>{});
+			mesh->lodBuffers[lodCounter].meshFaceContainers.push_back(std::vector<TYPES::Face>{});
 			for (int faceCounter = 0; faceCounter < scene->mMeshes[assimp_mesh_counter]->mNumFaces; ++faceCounter) {
 				TYPES::Face face;
 				if (scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mNumIndices != 3) {
@@ -279,13 +307,13 @@ std::shared_ptr<MESH_UNPACKER::Mesh> assimp_to_mesh_ref(std::shared_ptr<aiScene>
 				face.index1 = scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[0];
 				face.index2 = scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[1];
 				face.index3 = scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[2];
-				newMesh->lodBuffers[lodCounter].meshFaceContainers[meshCounter].push_back(face);
+				mesh->lodBuffers[lodCounter].meshFaceContainers[meshCounter].push_back(face);
 			}
-			// VertexGroup indices
 
 		}
 		assimp_mesh_counter++;
 	}
-	create_mesh_data_section(newMesh, mesh);
-	//newMesh->meshDescSection = mesh->meshDescSection;
+
+	create_mesh_data_section(mesh);
+	edit_mesh_info_section(mesh);
 }

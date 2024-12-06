@@ -40,50 +40,72 @@ void MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::populate(std::ifstream& mes
 	expect(sectionID, 0x95DBDB69u);
 
 	for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
-		byte* tmp_buf = new byte[meshDescSection.vertexDataSectionSizes[i]];
-		mesh.read((char*)tmp_buf, meshDescSection.vertexDataSectionSizes[i]);
+		std::vector<byte> tmp_buf(meshDescSection.vertexDataSectionSizes[i]);
+		mesh.read((char*)tmp_buf.data(), meshDescSection.vertexDataSectionSizes[i]);
 		vertexDataSections.push_back(tmp_buf);
 	}
 
 	for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
-		byte* tmp_buf = new byte[meshDescSection.faceDataSectionSizes[i]];
-		mesh.read((char*)tmp_buf, meshDescSection.faceDataSectionSizes[i]);
+		std::vector<byte> tmp_buf(meshDescSection.faceDataSectionSizes[i]);
+		mesh.read((char*)tmp_buf.data(), meshDescSection.faceDataSectionSizes[i]);
 		faceDataSections.push_back(tmp_buf);
 	}
 
 	for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
-		byte* tmp_buf = new byte[meshDescSection.vertexGroupDataSectionSizes[i]];
-		mesh.read((char*)tmp_buf, meshDescSection.vertexGroupDataSectionSizes[i]);
+		std::vector<byte> tmp_buf(meshDescSection.vertexGroupDataSectionSizes[i]);
+		mesh.read((char*)tmp_buf.data(), meshDescSection.vertexGroupDataSectionSizes[i]);
 		vertexGroupDataSections.push_back(tmp_buf);
 	}
 }
 
 MESH_UNPACKER::INTERNAL::MESH::MeshDataSection::~MeshDataSection() {
 	for (auto& iter : vertexDataSections)
-		delete[] iter;
+		std::vector<byte>().swap(iter);
 	for (auto& iter : faceDataSections)
-		delete[] iter;
+		std::vector<byte>().swap(iter);
 	for (auto& iter : vertexGroupDataSections)
-		delete[] iter;
+		std::vector<byte>().swap(iter);
 }
 
 void MESH_UNPACKER::INTERNAL::MESH::BufferLayout::populate(MeshInfoSection& meshInfoSection, int index) {
 	using Buffer = MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout::Buffer;
-	
+	using Type = MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout::Type;
+	auto size_check = [&](Type type) -> ulong{
+		switch (type)
+		{
+		case Type::VECTOR2F32:
+			return 8;
+		case Type::VECTOR2S16:
+			return 4;
+		case Type::VECTOR3F32:
+			return 12;
+		case Type::VECTOR4F16:
+			return 8;
+		case Type::VECTOR4F32:
+			return 16;
+		case Type::VECTOR4U8:
+			return 4;
+		default:
+			return 0;
+		}
+	};
+
 	const auto& layout = meshInfoSection.bufferLayoutSection.vertexBufferLayouts[index];
 	for (int i = 0; i < layout.attributesCount; ++i) {
 		if (layout.attributesLayout[i].bufferIndex == Buffer::Buffer_0) {
 			order.push_back(layout.attributesLayout[i]);
+			size += size_check(layout.attributesLayout[i].type);
 		}
 	}
 	for (int i = 0; i < layout.attributesCount; ++i) {
 		if (layout.attributesLayout[i].bufferIndex == Buffer::Buffer_1) {
 			order.push_back(layout.attributesLayout[i]);
+			size += size_check(layout.attributesLayout[i].type);
 		}
 	}
 }
 
-void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, const std::vector<INTERNAL::MESH::BufferLayout>& bufferLayouts,
+void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInfoSection, MeshDataSection& meshDataSection, std::vector<INTERNAL::MESH::BufferLayout>& bufferLayouts,
 	int lodNumber, int mesh_counted) {
 
 
@@ -222,23 +244,23 @@ void MESH_UNPACKER::INTERNAL::MESH::LODBuffer::populate(MeshInfoSection& meshInf
 		for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
 			TYPES::VertexAttribute vertexAttribute{};
 			for (auto& attribute : bufferLayouts[current_layer_index].order) {
-				read_attribute(meshDataSection.vertexDataSections[lodNumber], attribute, vertexAttribute, Buffer::Buffer_0);
+				read_attribute(meshDataSection.vertexDataSections[lodNumber].data(), attribute, vertexAttribute, Buffer::Buffer_0);
 			}
 			meshVertexAttributeContainers[mesh].push_back(vertexAttribute);
 		}
 		for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
 			for (auto& attribute : bufferLayouts[current_layer_index].order) {
-				read_attribute(meshDataSection.vertexDataSections[lodNumber], attribute, meshVertexAttributeContainers[mesh][vertexCounter],
+				read_attribute(meshDataSection.vertexDataSections[lodNumber].data(), attribute, meshVertexAttributeContainers[mesh][vertexCounter],
 					Buffer::Buffer_1);
 			}
 		}
-		TYPES::Face* face = (TYPES::Face*)(meshDataSection.faceDataSections[lodNumber] + virtual_face_buffer_offset);
+		TYPES::Face* face = (TYPES::Face*)(meshDataSection.faceDataSections[lodNumber].data() + virtual_face_buffer_offset);
 		meshFaceContainers.push_back(std::vector<TYPES::Face>{});
 		for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
 			meshFaceContainers[mesh].push_back(face[faceCounter]);
 			virtual_face_buffer_offset += sizeof(TYPES::Face);
 		}
-		byte* vertexGroupIndex = (byte*)(meshDataSection.vertexGroupDataSections[lodNumber] + virtual_vertexGroup_buffer_offset);
+		byte* vertexGroupIndex = (byte*)(meshDataSection.vertexGroupDataSections[lodNumber].data() + virtual_vertexGroup_buffer_offset);
 		meshVertexGroupContainers.push_back(std::vector<byte>{});
 		for (int vGCounter = 0; vGCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++vGCounter) {
 			meshVertexGroupContainers[mesh].push_back(vertexGroupIndex[vGCounter]);
@@ -278,14 +300,14 @@ void MESH_UNPACKER::MeshLoader::load(const std::string& mesh_file_name, const st
 	mesh->meshDataSection.populate(mesh_file, mesh->meshDescSection);
 
 	for (int i = 0; i < mesh->meshInfoSection.bufferLayoutCount; ++i) {
-		bufferLayouts.push_back(INTERNAL::MESH::BufferLayout{});
-		bufferLayouts[i].populate(mesh->meshInfoSection, i);
+		mesh->bufferLayouts.push_back(INTERNAL::MESH::BufferLayout{});
+		mesh->bufferLayouts[i].populate(mesh->meshInfoSection, i);
 	}
 
 	int mesh_counted = 0;
 	for (int lodCounter = 0; lodCounter < mesh->meshInfoSection.lodCount; ++lodCounter) {
 		mesh->lodBuffers.push_back(MESH::LODBuffer{});
-		mesh->lodBuffers[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, bufferLayouts, lodCounter, mesh_counted);
+		mesh->lodBuffers[lodCounter].populate(mesh->meshInfoSection, mesh->meshDataSection, mesh->bufferLayouts, lodCounter, mesh_counted);
 		mesh_counted += mesh->meshInfoSection.lodInfos[lodCounter].meshCount;
 	}
 }
