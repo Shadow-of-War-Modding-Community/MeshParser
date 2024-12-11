@@ -211,14 +211,16 @@ namespace PARSER {
 
 		std::vector<LODContainer> lodContainers;
 
-		aiScene* assimp_scene;
+		aiScene* assimp_scene = nullptr;
 
 	};
 
 	struct Parser {
 
+		// For now adding a reference_mesh file is mandatory when importing anything different that .mesh files
+		static Mesh Import(const std::string& path, Mesh* = nullptr);
 
-		static Mesh import(const std::string&);
-
+		static void Export(const Mesh& mesh, const std::string& path, const std::string& format);
+		
 	};
 }

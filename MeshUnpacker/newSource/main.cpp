@@ -1,11 +1,16 @@
 #include "Parser/includes-types.h"
 
 int main() {
-	PARSER::Mesh mesh;
-	mesh.import_mesh("F:\\balrog_base.mesh");
-	mesh.export_custom("F:\\balrog_base.fbx", "fbxa");
+	using namespace PARSER;
 
-	PARSER::Mesh mesh2;
-	mesh2.import_custom("F:\\balrog_base.fbx", mesh);
+	auto mesh = Parser::Import("F:\\sauron_flangedmace.mesh");
+	
+	auto mesh2 = Parser::Import("F:\\tire.fbx", &mesh);
+	
+	Parser::Export(mesh2, "F:\\out.mesh", "mesh");
+
+	//auto mesh = Parser::Import("F:\\out.mesh");
+	//
+	//Parser::Export(mesh, "F:\\out2.fbx", "fbx");
 
 }

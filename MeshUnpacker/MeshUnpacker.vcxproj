@@ -22,6 +22,7 @@
     <ClCompile Include="newSource\main.cpp" />
     <ClCompile Include="newSource\Parser\Mesh\assimp_to_internal.cpp" />
     <ClCompile Include="newSource\Parser\Mesh\mesh.cpp" />
+    <ClCompile Include="newSource\Parser\Mesh\internal_to_assimp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="newSource\Parser\half.h" />

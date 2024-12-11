@@ -15,13 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="newSource\Parser\Mesh\assimp_to_internal.cpp">
+    <ClCompile Include="newSource\Parser\Mesh\internal_to_assimp.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="newSource\main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="newSource\Parser\Mesh\mesh.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="newSource\main.cpp">
+    <ClCompile Include="newSource\Parser\Mesh\assimp_to_internal.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
