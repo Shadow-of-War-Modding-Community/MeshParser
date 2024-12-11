@@ -34,7 +34,14 @@ int main() {
 
 	auto scene = mesh_to_assimp(m);
 
-	assimp_to_mesh_ref(scene, m);
+	Assimp::Exporter exporter;
+
+	if (exporter.Export(scene.get(), "fbxa", "F:\\out.fbx") != AI_SUCCESS) {
+		std::cout << exporter.GetErrorString();
+		//error(exporter.GetErrorString());
+	}
+
+	//assimp_to_mesh_ref(scene, m);
 	//auto scene = mesh_to_assimp(m);
 
 	//assimp_to_mesh_ref(scene, m);

@@ -1,140 +1,147 @@
 #include "mesh.h"
 
-void PARSER::Mesh::mesh_to_internal(const std::string& mesh_file)
+static PARSER::Mesh mesh_to_internal(const std::string& mesh_file)
 {
+	using namespace PARSER;
 	using namespace INTERNAL;
 	using namespace MESH;
-	std::ifstream mesh(mesh_file, std::ios::binary);
-	
+
+	Mesh mesh;
+
+	std::ifstream mesh_io(mesh_file, std::ios::binary);	
+
+
 	// Header
 	{
-		mesh.read((char*)&header, sizeof(header));
+		mesh_io.read((char*)&mesh.header, sizeof(Header));
 
-		expect(header.magic_u, 0x48534D4Du);
-		expect(header.version, 0x11u);
+		expect(mesh.header.magic_u, 0x48534D4Du);
+		expect(mesh.header.version, 0x11u);
 	}
 
 	// DescSection
 	{
-		auto& mDS = meshDescSection;
+		auto& mDS = mesh.meshDescSection;
 
-		mesh.read((char*)&mDS, sizeof(ulong) * 3); // parse first three attributes
+		mesh_io.read((char*)&mDS, sizeof(ulong) * 3); // parse first three attributes
 
 		expect(mDS.sectionID, 0xEBAEC3FAu);
 
 		mDS.unkMatIndices.resize(mDS.materialIndicesCount);
-		mesh.read((char*)mDS.unkMatIndices.data(), sizeof(long) * mDS.materialIndicesCount);
+		mesh_io.read((char*)mDS.unkMatIndices.data(), sizeof(long) * mDS.materialIndicesCount);
 		
 		mDS.materialIndices.resize(mDS.materialIndicesCount);
-		mesh.read((char*)mDS.materialIndices.data(), sizeof(long) * mDS.materialIndicesCount);
+		mesh_io.read((char*)mDS.materialIndices.data(), sizeof(long) * mDS.materialIndicesCount);
 	
 		mDS.vertexDataSectionSizes.resize(mDS.dataSectionCount);
-		mesh.read((char*)mDS.vertexDataSectionSizes.data(), sizeof(long) * mDS.dataSectionCount);
+		mesh_io.read((char*)mDS.vertexDataSectionSizes.data(), sizeof(long) * mDS.dataSectionCount);
 	
 		mDS.faceDataSectionSizes.resize(mDS.dataSectionCount);
-		mesh.read((char*)mDS.faceDataSectionSizes.data(), sizeof(long) * mDS.dataSectionCount);
+		mesh_io.read((char*)mDS.faceDataSectionSizes.data(), sizeof(long) * mDS.dataSectionCount);
 	
 		mDS.vertexGroupDataSectionSizes.resize(mDS.dataSectionCount);
-		mesh.read((char*)mDS.vertexGroupDataSectionSizes.data(), sizeof(long) * mDS.dataSectionCount);
+		mesh_io.read((char*)mDS.vertexGroupDataSectionSizes.data(), sizeof(long) * mDS.dataSectionCount);
 	}
 
 	// InfoSection
 	{
-		auto& mIS = meshInfoSection;
+		auto& mIS = mesh.meshInfoSection;
 
-		mesh.read((char*)&mIS, 72); // parse until lodGroupIDs
+		mesh_io.read((char*)&mIS, 72); // parse until lodGroupIDs
 
 		expect(mIS.sectionID, 0x1A1541BCu);
 		
 		mIS.lodGroupIDs.resize(mIS.lodGroupCount);
-		mesh.read((char*)mIS.lodGroupIDs.data(), sizeof(ulong) * mIS.lodGroupCount);
+		mesh_io.read((char*)mIS.lodGroupIDs.data(), sizeof(ulong) * mIS.lodGroupCount);
 	
 		mIS.connections.resize(mIS.connectionCount);
-		mesh.read((char*)mIS.connections.data(), sizeof(MeshInfoSection::Connection) * mIS.connectionCount);
+		mesh_io.read((char*)mIS.connections.data(), sizeof(MeshInfoSection::Connection) * mIS.connectionCount);
 	
 		mIS.lodInfos.resize(mIS.lodCount);
-		mesh.read((char*)mIS.lodInfos.data(), sizeof(MeshInfoSection::LodInfo) * mIS.lodCount);
+		mesh_io.read((char*)mIS.lodInfos.data(), sizeof(MeshInfoSection::LodInfo) * mIS.lodCount);
 
 		mIS.meshInfos.resize(mIS.meshCount);
-		mesh.read((char*)mIS.meshInfos.data(), sizeof(MeshInfoSection::MeshInfo) * mIS.meshCount);
+		mesh_io.read((char*)mIS.meshInfos.data(), sizeof(MeshInfoSection::MeshInfo) * mIS.meshCount);
 	
 		// LOD Section
 
-		read_ulong(mIS.lodSection.sectionID, mesh);
+		read_ulong(mIS.lodSection.sectionID, mesh_io);
 
 		expect(mIS.lodSection.sectionID, 0x8E3E068Eu);
 
 		mIS.lodSection.lodSettings.resize(mIS.lodSettingsCount);
-		mesh.read((char*)mIS.lodSection.lodSettings.data(), sizeof(ulong) * mIS.lodSettingsCount);
+		mesh_io.read((char*)mIS.lodSection.lodSettings.data(), sizeof(ulong) * mIS.lodSettingsCount);
 	
 		mIS.lodSection.lodThresholds.meshLodThresholds.resize(mIS.meshLodCount);
-		mesh.read((char*)mIS.lodSection.lodThresholds.meshLodThresholds.data(), sizeof(float) * mIS.meshLodCount);
+		mesh_io.read((char*)mIS.lodSection.lodThresholds.meshLodThresholds.data(), sizeof(float) * mIS.meshLodCount);
 
 		mIS.lodSection.lodThresholds.shadowLodThresholds.resize(mIS.shadowLodCount);
-		mesh.read((char*)mIS.lodSection.lodThresholds.shadowLodThresholds.data(), sizeof(float) * mIS.shadowLodCount);
+		mesh_io.read((char*)mIS.lodSection.lodThresholds.shadowLodThresholds.data(), sizeof(float) * mIS.shadowLodCount);
 		
 		mIS.lodSection.lodConnections.meshLodConnections.resize(mIS.meshLodCount);
-		mesh.read((char*)mIS.lodSection.lodConnections.meshLodConnections.data(), sizeof(ulong) * mIS.meshLodCount);
+		mesh_io.read((char*)mIS.lodSection.lodConnections.meshLodConnections.data(), sizeof(ulong) * mIS.meshLodCount);
 
 		mIS.lodSection.lodConnections.shadowLodConnections.resize(mIS.shadowLodCount);
-		mesh.read((char*)mIS.lodSection.lodConnections.shadowLodConnections.data(), sizeof(ulong) * mIS.shadowLodCount);
+		mesh_io.read((char*)mIS.lodSection.lodConnections.shadowLodConnections.data(), sizeof(ulong) * mIS.shadowLodCount);
 	
 		// Buffer Layout Section
 
-		read_ulong(mIS.bufferLayoutSection.sectionID, mesh);
+		read_ulong(mIS.bufferLayoutSection.sectionID, mesh_io);
 
 		expect(mIS.bufferLayoutSection.sectionID, 0x37D749A6u);
 
 		mIS.bufferLayoutSection.vertexBufferLayouts.resize(mIS.bufferLayoutCount);
 	
 		for (int i = 0; i < mIS.bufferLayoutCount; ++i) {
-			read_ulong(mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesCount, mesh);
+			read_ulong(mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesCount, mesh_io);
 			mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesLayouts.resize(mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesCount);
-			mesh.read((char*)mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesLayouts.data(), 
+			mesh_io.read((char*)mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesLayouts.data(), 
 				sizeof(MeshInfoSection::BufferLayoutSection::VertexBufferLayout::AttributeLayout) * mIS.bufferLayoutSection.vertexBufferLayouts[i].attributesCount);
 		}
 
 		// Bones Section
 
-		read_ulong(mIS.boneSection.sectionID, mesh);
+		read_ulong(mIS.boneSection.sectionID, mesh_io);
 
 		expect(mIS.boneSection.sectionID, 0x93D9A424u);
 
 		mIS.boneSection.bones.resize(mIS.boneCount);
-		mesh.read((char*)mIS.boneSection.bones.data(), sizeof(Bone) * mIS.boneCount);
+		mesh_io.read((char*)mIS.boneSection.bones.data(), sizeof(Bone) * mIS.boneCount);
 	}
 
 	// DataSection
 	{
-		auto& mDS = meshDataSection;
-		read_ulong(mDS.sectionID, mesh);
+		auto& mDS = mesh.meshDataSection;
+		read_ulong(mDS.sectionID, mesh_io);
 
 		expect(mDS.sectionID, 0x95DBDB69u);
 
-		for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
-			std::vector<byte> tmp_buf(meshDescSection.vertexDataSectionSizes[i]);
-			mesh.read((char*)tmp_buf.data(), meshDescSection.vertexDataSectionSizes[i]);
+		for (int i = 0; i < mesh.meshDescSection.dataSectionCount; ++i) {
+			std::vector<byte> tmp_buf(mesh.meshDescSection.vertexDataSectionSizes[i]);
+			mesh_io.read((char*)tmp_buf.data(), mesh.meshDescSection.vertexDataSectionSizes[i]);
 			mDS.vertexDataSections.push_back(tmp_buf);
 		}
 
-		for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
-			std::vector<byte> tmp_buf(meshDescSection.faceDataSectionSizes[i]);
-			mesh.read((char*)tmp_buf.data(), meshDescSection.faceDataSectionSizes[i]);
+		for (int i = 0; i < mesh.meshDescSection.dataSectionCount; ++i) {
+			std::vector<byte> tmp_buf(mesh.meshDescSection.faceDataSectionSizes[i]);
+			mesh_io.read((char*)tmp_buf.data(), mesh.meshDescSection.faceDataSectionSizes[i]);
 			mDS.faceDataSections.push_back(tmp_buf);
 		}
 
-		for (int i = 0; i < meshDescSection.dataSectionCount; ++i) {
-			std::vector<byte> tmp_buf(meshDescSection.vertexGroupDataSectionSizes[i]);
-			mesh.read((char*)tmp_buf.data(), meshDescSection.vertexGroupDataSectionSizes[i]);
+		for (int i = 0; i < mesh.meshDescSection.dataSectionCount; ++i) {
+			std::vector<byte> tmp_buf(mesh.meshDescSection.vertexGroupDataSectionSizes[i]);
+			mesh_io.read((char*)tmp_buf.data(), mesh.meshDescSection.vertexGroupDataSectionSizes[i]);
 			mDS.vertexGroupDataSections.push_back(tmp_buf);
 		}
 	}
 
+	return mesh;
 	
 }
 
-void PARSER::Mesh::internal_to_lodContainers()
+static void internal_to_lodContainers(PARSER::Mesh& mesh)
 {
+	using namespace PARSER;
 	using namespace INTERNAL;
 	using namespace MESH;
 
@@ -161,21 +168,21 @@ void PARSER::Mesh::internal_to_lodContainers()
 			default:
 				return 0;
 			}
-			};
+		};
 
-		for (int i = 0; i < meshInfoSection.bufferLayoutCount; ++i) {
-			bufferLayouts.push_back(BufferLayout{});
-			const auto& layout = meshInfoSection.bufferLayoutSection.vertexBufferLayouts[i];
+		for (int i = 0; i < mesh.meshInfoSection.bufferLayoutCount; ++i) {
+			mesh.bufferLayouts.push_back(BufferLayout{});
+			const auto& layout = mesh.meshInfoSection.bufferLayoutSection.vertexBufferLayouts[i];
 			for (int j = 0; j < layout.attributesCount; ++j) {
 				if (layout.attributesLayouts[j].bufferIndex == Buffer::Buffer_0) {
-					bufferLayouts[i].order.push_back(layout.attributesLayouts[j]);
-					bufferLayouts[i].size += size_check(layout.attributesLayouts[j].type);
+					mesh.bufferLayouts[i].order.push_back(layout.attributesLayouts[j]);
+					mesh.bufferLayouts[i].size += size_check(layout.attributesLayouts[j].type);
 				}
 			}
 			for (int j = 0; j < layout.attributesCount; ++j) {
 				if (layout.attributesLayouts[j].bufferIndex == Buffer::Buffer_1) {
-					bufferLayouts[i].order.push_back(layout.attributesLayouts[j]);
-					bufferLayouts[i].size += size_check(layout.attributesLayouts[j].type);
+					mesh.bufferLayouts[i].order.push_back(layout.attributesLayouts[j]);
+					mesh.bufferLayouts[i].size += size_check(layout.attributesLayouts[j].type);
 				}
 			}
 		}
@@ -312,48 +319,50 @@ void PARSER::Mesh::internal_to_lodContainers()
 				}
 			};
 		int mesh_counted = 0;
-		for (int lodCounter = 0; lodCounter < meshInfoSection.lodCount; ++lodCounter) {
-			lodContainers.push_back(LODContainer{});
-			for (int mesh = 0; mesh < meshInfoSection.lodInfos[lodCounter].meshCount; ++mesh) {
-				auto current_layer_index = meshInfoSection.meshInfos[mesh_counted + mesh].layerIndex;
-				lodContainers[lodCounter].meshVertexAttributeContainers.push_back(std::vector<VertexAttribute>{});
-				for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
+		for (int lodCounter = 0; lodCounter < mesh.meshInfoSection.lodCount; ++lodCounter) {
+			mesh.lodContainers.push_back(LODContainer{});
+			for (int mesh_counter = 0; mesh_counter < mesh.meshInfoSection.lodInfos[lodCounter].meshCount; ++mesh_counter) {
+				auto current_layer_index = mesh.meshInfoSection.meshInfos[mesh_counted + mesh_counter].layerIndex;
+				mesh.lodContainers[lodCounter].meshVertexAttributeContainers.push_back(std::vector<VertexAttribute>{});
+				for (int vertexCounter = 0; vertexCounter < mesh.meshInfoSection.meshInfos[mesh_counted + mesh_counter].verticesCount; ++vertexCounter) {
 					VertexAttribute vertexAttribute{};
-					for (auto& attribute : bufferLayouts[current_layer_index].order) {
-						read_attribute(meshDataSection.vertexDataSections[lodCounter].data(), attribute, vertexAttribute, Buffer::Buffer_0);
+					for (auto& attribute : mesh.bufferLayouts[current_layer_index].order) {
+						read_attribute(mesh.meshDataSection.vertexDataSections[lodCounter].data(), attribute, vertexAttribute, Buffer::Buffer_0);
 					}
-					lodContainers[lodCounter].meshVertexAttributeContainers[mesh].push_back(vertexAttribute);
+					mesh.lodContainers[lodCounter].meshVertexAttributeContainers[mesh_counter].push_back(vertexAttribute);
 				}
-				for (int vertexCounter = 0; vertexCounter < meshInfoSection.meshInfos[mesh_counted + mesh].verticesCount; ++vertexCounter) {
-					for (auto& attribute : bufferLayouts[current_layer_index].order) {
-						read_attribute(meshDataSection.vertexDataSections[lodCounter].data(), attribute, lodContainers[lodCounter].meshVertexAttributeContainers[mesh][vertexCounter],
+				for (int vertexCounter = 0; vertexCounter < mesh.meshInfoSection.meshInfos[mesh_counted + mesh_counter].verticesCount; ++vertexCounter) {
+					for (auto& attribute : mesh.bufferLayouts[current_layer_index].order) {
+						read_attribute(mesh.meshDataSection.vertexDataSections[lodCounter].data(), attribute, mesh.lodContainers[lodCounter].meshVertexAttributeContainers[mesh_counter][vertexCounter],
 							Buffer::Buffer_1);
 					}
 				}
-				Face* face = (Face*)(meshDataSection.faceDataSections[lodCounter].data() + virtual_face_buffer_offset);
-				lodContainers[lodCounter].meshFaceContainers.push_back(std::vector<Face>{});
-				for (int faceCounter = 0; faceCounter < meshInfoSection.meshInfos[mesh_counted + mesh].faceIndicesCount / 3; ++faceCounter) {
-					lodContainers[lodCounter].meshFaceContainers[mesh].push_back(face[faceCounter]);
+				Face* face = (Face*)(mesh.meshDataSection.faceDataSections[lodCounter].data() + virtual_face_buffer_offset);
+				mesh.lodContainers[lodCounter].meshFaceContainers.push_back(std::vector<Face>{});
+				for (int faceCounter = 0; faceCounter < mesh.meshInfoSection.meshInfos[mesh_counted + mesh_counter].faceIndicesCount / 3; ++faceCounter) {
+					mesh.lodContainers[lodCounter].meshFaceContainers[mesh_counter].push_back(face[faceCounter]);
 					virtual_face_buffer_offset += sizeof(Face);
 				}
-				byte* vertexGroupIndex = (byte*)(meshDataSection.vertexGroupDataSections[lodCounter].data() + virtual_vertexGroup_buffer_offset);
-				lodContainers[lodCounter].meshVertexGroupContainers.push_back(std::vector<byte>{});
-				for (int vGCounter = 0; vGCounter < meshInfoSection.meshInfos[mesh_counted + mesh].vertexGroupsCount; ++vGCounter) {
-					lodContainers[lodCounter].meshVertexGroupContainers[mesh].push_back(vertexGroupIndex[vGCounter]);
+				byte* vertexGroupIndex = (byte*)(mesh.meshDataSection.vertexGroupDataSections[lodCounter].data() + virtual_vertexGroup_buffer_offset);
+				mesh.lodContainers[lodCounter].meshVertexGroupContainers.push_back(std::vector<byte>{});
+				for (int vGCounter = 0; vGCounter < mesh.meshInfoSection.meshInfos[mesh_counted + mesh_counter].vertexGroupsCount; ++vGCounter) {
+					mesh.lodContainers[lodCounter].meshVertexGroupContainers[mesh_counter].push_back(vertexGroupIndex[vGCounter]);
 					virtual_vertexGroup_buffer_offset += sizeof(byte);
 				}
 			}
 			virtual_vertex_buffer_offset = 0;
 			virtual_face_buffer_offset = 0;
 			virtual_vertexGroup_buffer_offset = 0;
-			mesh_counted += meshInfoSection.lodInfos[lodCounter].meshCount;
+			mesh_counted += mesh.meshInfoSection.lodInfos[lodCounter].meshCount;
 		}
 	}
 }
 
-void PARSER::Mesh::lodContainers_to_assimp()
+static void lodContainers_to_assimp(PARSER::Mesh& mesh)
 {
-	scene = std::make_unique<aiScene>();
+	using namespace PARSER;
+
+	mesh.assimp_scene = new aiScene;
 
 	aiMaterial* material = new aiMaterial();
 
@@ -393,22 +402,22 @@ void PARSER::Mesh::lodContainers_to_assimp()
 
 
 	aiNode* rootNode = new aiNode;
-	rootNode->mNumMeshes = meshInfoSection.meshCount;
+	rootNode->mNumMeshes = mesh.meshInfoSection.meshCount;
 	rootNode->mName = "RootNode";
 
 	int mesh_counter = 0;
-	aiMesh** mesh_buffer = new aiMesh*[meshInfoSection.meshCount];
+	aiMesh** mesh_buffer = new aiMesh*[mesh.meshInfoSection.meshCount];
 
-	for (int lodCounter = 0; lodCounter < lodContainers.size(); ++lodCounter) {
-		for (int meshCounter = 0; meshCounter < lodContainers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
+	for (int lodCounter = 0; lodCounter < mesh.lodContainers.size(); ++lodCounter) {
+		for (int meshCounter = 0; meshCounter < mesh.lodContainers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
 			aiMesh* ai_mesh = new aiMesh;
-			auto current_mesh_vertex_count = lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter].size();
+			auto current_mesh_vertex_count = mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter].size();
 			aiVector3D* positionBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* normalsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* tangentsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiVector3D* bitangentsBuffer = new aiVector3D[current_mesh_vertex_count];
 			aiColor4D* colorsBuffer = new aiColor4D[current_mesh_vertex_count];
-			auto uvChannelCount = lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter][0].uvs.size();
+			auto uvChannelCount = mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter][0].uvs.size();
 			aiVector3D** uvsBuffers = new aiVector3D * [uvChannelCount];
 			for (int i = 0; i < uvChannelCount; ++i)
 				uvsBuffers[i] = new aiVector3D[current_mesh_vertex_count];
@@ -427,7 +436,7 @@ void PARSER::Mesh::lodContainers_to_assimp()
 			//	delete[] bones;
 
 			for (int vertexCounter = 0; vertexCounter < current_mesh_vertex_count; ++vertexCounter) {
-				const auto& vertex = lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter][vertexCounter];
+				const auto& vertex = mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter][vertexCounter];
 
 				positionBuffer[vertexCounter].x = vertex.position.x;
 				positionBuffer[vertexCounter].y = vertex.position.y;
@@ -477,10 +486,10 @@ void PARSER::Mesh::lodContainers_to_assimp()
 			}
 
 			// Process faces
-			auto current_mesh_face_count = lodContainers[lodCounter].meshFaceContainers[meshCounter].size();
+			auto current_mesh_face_count = mesh.lodContainers[lodCounter].meshFaceContainers[meshCounter].size();
 			aiFace* faceBuffer = new aiFace[current_mesh_face_count];
 			for (int faceCounter = 0; faceCounter < current_mesh_face_count; ++faceCounter) {
-				const auto& face = lodContainers[lodCounter].meshFaceContainers[meshCounter][faceCounter];
+				const auto& face = mesh.lodContainers[lodCounter].meshFaceContainers[meshCounter][faceCounter];
 				faceBuffer[faceCounter].mNumIndices = 3;
 				faceBuffer[faceCounter].mIndices = new unsigned int[3];
 				faceBuffer[faceCounter].mIndices[0] = face.index1;
@@ -537,8 +546,8 @@ void PARSER::Mesh::lodContainers_to_assimp()
 		}
 	}
 
-	scene->mNumMeshes = meshInfoSection.meshCount;
-	scene->mMeshes = mesh_buffer;
+	mesh.assimp_scene->mNumMeshes = mesh.meshInfoSection.meshCount;
+	mesh.assimp_scene->mMeshes = mesh_buffer;
 
 	//if (mesh->has_skeleton) {
 	//	std::vector<aiNode*> nodes(mesh->skeleton->header.boneCount1);
@@ -582,33 +591,22 @@ void PARSER::Mesh::lodContainers_to_assimp()
 	//    lodNodes[lodCounter]->mMeshes = meshes;
 	//}
 	//rootNode->addChildren(mesh->lodBuffers.size(), lodNodes);
-	unsigned int* meshNr = new unsigned int[meshInfoSection.meshCount];
-	for (int i = 0; i < meshInfoSection.meshCount; ++i)
+	unsigned int* meshNr = new unsigned int[mesh.meshInfoSection.meshCount];
+	for (int i = 0; i < mesh.meshInfoSection.meshCount; ++i)
 		meshNr[i] = i;
 
 	rootNode->mMeshes = meshNr;
-	scene->mRootNode = rootNode;
-	scene->mNumMaterials = 1;
-	scene->mMaterials = new aiMaterial*[1]{material};
+	mesh.assimp_scene->mRootNode = rootNode;
+	mesh.assimp_scene->mNumMaterials = 1;
+	mesh.assimp_scene->mMaterials = new aiMaterial*[1]{material};
 }
 
-
-void PARSER::Mesh::assimp_to_mesh()
+PARSER::Mesh PARSER::Parser::import(const std::string& file)
 {
-
-}
-
-void PARSER::Mesh::import_mesh(const std::string& mesh_file)
-{
-	mesh_to_internal(mesh_file);
-	internal_to_lodContainers();
-	lodContainers_to_assimp();
-}
-
-void PARSER::Mesh::export_custom(const std::string& file, const std::string& format)
-{
-	Assimp::Exporter exporter;
-	if (exporter.Export(scene.get(), format, file) != AI_SUCCESS) {
-		error(exporter.GetErrorString());
+	if (file.ends_with(".mesh")) {
+		auto mesh = mesh_to_internal(file);
+		internal_to_lodContainers(mesh);
+		lodContainers_to_assimp(mesh);
+		return mesh;
 	}
 }

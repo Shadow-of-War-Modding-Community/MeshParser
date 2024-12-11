@@ -201,7 +201,7 @@ namespace PARSER {
 		std::vector<std::vector<byte>> meshVertexGroupContainers;
 	};
 
-	class Mesh {
+	struct Mesh {
 		INTERNAL::Header header{};
 		INTERNAL::MeshDescSection meshDescSection{};
 		INTERNAL::MeshInfoSection meshInfoSection{};
@@ -211,21 +211,14 @@ namespace PARSER {
 
 		std::vector<LODContainer> lodContainers;
 
-		std::unique_ptr<aiScene> scene;
+		aiScene* assimp_scene;
 
-		void mesh_to_internal(const std::string& mesh_file);
+	};
 
-		void internal_to_lodContainers();
-
-		void lodContainers_to_assimp();
+	struct Parser {
 
 
-		void assimp_to_mesh();
+		static Mesh import(const std::string&);
 
-	public:
-
-		void import_mesh(const std::string& mesh_file);
-
-		void export_custom(const std::string& file, const std::string& format);
 	};
 }

@@ -15,10 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="newSource\main.cpp">
+    <ClCompile Include="newSource\Parser\Mesh\assimp_to_internal.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="newSource\Parser\Mesh\mesh.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="newSource\main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,10 +29,10 @@
     <ClInclude Include="newSource\Parser\Mesh\mesh.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="newSource\Parser\includes-types.h">
+    <ClInclude Include="newSource\Parser\half.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="newSource\Parser\half.h">
+    <ClInclude Include="newSource\Parser\includes-types.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

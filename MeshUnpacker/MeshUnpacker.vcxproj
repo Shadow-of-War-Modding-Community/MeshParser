@@ -18,6 +18,16 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="newSource\main.cpp" />
+    <ClCompile Include="newSource\Parser\Mesh\assimp_to_internal.cpp" />
+    <ClCompile Include="newSource\Parser\Mesh\mesh.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="newSource\Parser\half.h" />
+    <ClInclude Include="newSource\Parser\includes-types.h" />
+    <ClInclude Include="newSource\Parser\Mesh\mesh.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -136,15 +146,6 @@
       <AdditionalDependencies>assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="newSource\main.cpp" />
-    <ClCompile Include="newSource\Parser\Mesh\mesh.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="newSource\Parser\half.h" />
-    <ClInclude Include="newSource\Parser\includes-types.h" />
-    <ClInclude Include="newSource\Parser\Mesh\mesh.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
