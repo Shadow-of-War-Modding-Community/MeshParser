@@ -89,6 +89,28 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 	using namespace INTERNAL;
 	using namespace MESH;
 
+
+	// Everything set to NULL has to be revised
+	mesh.meshInfoSection.sectionID = 0x1A1541BC;
+	mesh.meshInfoSection.lodGroupCount = NULL; 
+	mesh.meshInfoSection.connectionCount = NULL;
+	mesh.meshInfoSection.lodCount = 1;
+	mesh.meshInfoSection.meshCount = mesh.assimp_scene->mNumMeshes;
+	mesh.meshInfoSection.unknownULong1 = NULL;
+	mesh.meshInfoSection.lodSettingsCount = NULL;
+	mesh.meshInfoSection.meshLodCount = NULL;
+	mesh.meshInfoSection.shadowLodCount = NULL;
+	mesh.meshInfoSection.bufferLayoutCount = 1; // Only one supportet yet
+	mesh.meshInfoSection.ulongReadCount = NULL;
+	mesh.meshInfoSection.unknownFloat = NULL;
+	mesh.meshInfoSection.unknown1[0] = NULL;
+	mesh.meshInfoSection.unknown1[1] = NULL;
+	mesh.meshInfoSection.unknown1[2] = NULL;
+	mesh.meshInfoSection.unknown1[3] = NULL;
+	mesh.meshInfoSection.boneCount = 0;
+	mesh.meshInfoSection.boneSectionSize = 0; // Experiment
+
+
 	for (int i = 0; i < mesh.meshInfoSection.lodCount; ++i) {
 		mesh.meshInfoSection.lodInfos[i].faceDataSize = mesh.meshDataSection.faceDataSections[i].size();
 		mesh.meshInfoSection.lodInfos[i].vertexDataSize = mesh.meshDataSection.vertexDataSections[i].size();
@@ -129,6 +151,23 @@ void lodContainers_to_internal(PARSER::Mesh& mesh) {
 	using Attribute = AttributeLayout::Attribute;
 	using Type = AttributeLayout::Type;
 	using Buffer = AttributeLayout::Buffer;
+	using Channel = AttributeLayout::Channel;
+
+	// This is the default single channel UV map buffer layout for most of the meshes
+	BufferLayout bufferLayout;
+	bufferLayout.size = 60;
+	bufferLayout.order.push_back({ Buffer::Buffer_0, Type::VECTOR4F16, Attribute::POSITION, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_0, Type::VECTOR4U8, Attribute::WEIGHT, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_0, Type::VECTOR4U8, Attribute::VERTEXGROUP, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_1, Type::VECTOR2S16, Attribute::TEXCOORD, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_1, Type::VECTOR3F32, Attribute::NORMAL, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_1, Type::VECTOR3F32, Attribute::TANGENT, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_1, Type::VECTOR3F32, Attribute::BITANGENT, Channel::Channel_0 });
+	bufferLayout.order.push_back({ Buffer::Buffer_1, Type::VECTOR4U8, Attribute::COLOR, Channel::Channel_0 });
+	
+
+	mesh.bufferLayouts.push_back(bufferLayout);
+
 
 	int uv_counter = 0;
 
@@ -262,7 +301,8 @@ void lodContainers_to_internal(PARSER::Mesh& mesh) {
 	for (int lodCounter = 0; lodCounter < mesh.lodContainers.size(); ++lodCounter) {
 		mesh.meshDataSection.vertexDataSections.push_back(std::vector<byte>{});
 		for (int meshCounter = 0; meshCounter < mesh.lodContainers[lodCounter].meshVertexAttributeContainers.size(); ++meshCounter) {
-			auto current_layer_index = mesh.meshInfoSection.meshInfos[mesh_counted].layerIndex;
+			// For now there is only one layout buffer so its always 0
+			constexpr int current_layer_index = 0;
 			for (int vertexCounter = 0; vertexCounter < mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter].size(); ++vertexCounter) {
 				for (auto& attribute : mesh.bufferLayouts[current_layer_index].order) {
 					parse_attribute(&mesh.meshDataSection.vertexDataSections[lodCounter], attribute, Buffer::Buffer_0, lodCounter, meshCounter, vertexCounter);
@@ -301,27 +341,27 @@ void assimp_to_lodContainers(PARSER::Mesh& mesh, const PARSER::Mesh& reference_m
 	using namespace MESH;
 
 	// Will be edited later
-	mesh.header = reference_mesh.header;
-	mesh.meshDescSection = reference_mesh.meshDescSection;
-	mesh.meshInfoSection = reference_mesh.meshInfoSection;
+	//mesh.header = reference_mesh.header;
+	//mesh.meshDescSection = reference_mesh.meshDescSection;
+	//mesh.meshInfoSection = reference_mesh.meshInfoSection;
 
 	// VertexGroups will be unchanged for now
-	mesh.meshDataSection.vertexGroupDataSections = reference_mesh.meshDataSection.vertexGroupDataSections;
-	mesh.bufferLayouts = reference_mesh.bufferLayouts;
+	//mesh.meshDataSection.vertexGroupDataSections = reference_mesh.meshDataSection.vertexGroupDataSections;
+	//mesh.bufferLayouts = reference_mesh.bufferLayouts;
 
 	if (!mesh.assimp_scene->HasMeshes()) {
 		error("Scene doesn't contain any meshes!");
 	}
-	if (mesh.assimp_scene->mNumMeshes != mesh.meshInfoSection.meshCount) {
-		error("Mesh count is not equal in scene and reference mesh file");
-	}
+
+	constexpr int lodCount = 1; // For now it allows only ONE LOD
 
 	// Populate the lod buffers with the data from the assimp scene
 	int assimp_mesh_counter = 0;
-	for (int lodCounter = 0; lodCounter < mesh.meshInfoSection.lodCount; ++lodCounter) {
+	for (int lodCounter = 0; lodCounter < lodCount; ++lodCounter) {
 		mesh.lodContainers.push_back(LODContainer{});
 		error_checks(mesh.assimp_scene->mMeshes[assimp_mesh_counter]);
-		for (int meshCounter = 0; meshCounter < mesh.meshInfoSection.lodInfos[lodCounter].meshCount; ++meshCounter) {
+		int meshCount = mesh.assimp_scene->mNumMeshes;
+		for (int meshCounter = 0; meshCounter < meshCount; ++meshCounter) {
 			mesh.lodContainers[lodCounter].meshVertexAttributeContainers.push_back(std::vector<VertexAttribute>{});
 			for (int vertexAttributeCounter = 0; vertexAttributeCounter < mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNumVertices; ++vertexAttributeCounter) {
 				VertexAttribute vertexAttribute;
@@ -370,7 +410,7 @@ void assimp_to_lodContainers(PARSER::Mesh& mesh, const PARSER::Mesh& reference_m
 			for (int faceCounter = 0; faceCounter < mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNumFaces; ++faceCounter) {
 				Face face;
 				if (mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mNumIndices != 3) {
-					error("Faces are not triangulated!");
+					error("Faces are not triangulated! This shouldn't happen");
 				}
 				face.index1 = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[0];
 				face.index2 = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[1];
