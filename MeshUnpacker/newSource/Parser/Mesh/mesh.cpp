@@ -4,7 +4,7 @@ extern PARSER::Mesh mesh_to_internal(const std::string& mesh_file);
 extern void internal_to_lodContainers(PARSER::Mesh& mesh);
 extern void lodContainers_to_assimp(PARSER::Mesh& mesh);
 
-extern void assimp_to_lodContainers(PARSER::Mesh& mesh, const PARSER::Mesh& reference_mesh);
+extern void assimp_to_lodContainers(PARSER::Mesh& mesh);
 extern void lodContainers_to_internal(PARSER::Mesh& mesh);
 
 void export_mesh(const PARSER::Mesh& mesh, const std::string& path) {
@@ -93,7 +93,7 @@ void export_mesh(const PARSER::Mesh& mesh, const std::string& path) {
     mesh_io.close();
 }
 
-PARSER::Mesh PARSER::Parser::Import(const std::string& file, Mesh* reference_mesh)
+PARSER::Mesh PARSER::Parser::Import(const std::string& file)
 {
 	if (file.ends_with(".mesh")) {
 		auto mesh = mesh_to_internal(file);
@@ -101,14 +101,10 @@ PARSER::Mesh PARSER::Parser::Import(const std::string& file, Mesh* reference_mes
 		lodContainers_to_assimp(mesh);
 		return mesh;
 	}
-
-	if (reference_mesh == nullptr) {
-		error("Trying to import a file which is no .mesh file without having added a reference_mesh!");
-	}
 	Mesh mesh;
 	Assimp::Importer importer;
 	mesh.assimp_scene = (aiScene*)importer.ReadFile(file, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_CalcTangentSpace);
-	assimp_to_lodContainers(mesh, *reference_mesh);
+	assimp_to_lodContainers(mesh);
 	lodContainers_to_internal(mesh);
 	return mesh;
 }
