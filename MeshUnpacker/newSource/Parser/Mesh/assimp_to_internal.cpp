@@ -94,7 +94,7 @@ void edit_mesh_desc_section(PARSER::Mesh& mesh) {
 
 		mesh.meshDescSection.vertexDataSectionSizes[i] = mesh.meshDataSection.vertexDataSections[i].size();
 		mesh.meshDescSection.faceDataSectionSizes[i] = mesh.meshDataSection.faceDataSections[i].size();
-		mesh.meshDescSection.vertexGroupDataSectionSizes[i] = 0;
+		mesh.meshDescSection.vertexGroupDataSectionSizes[i] = mesh.meshDataSection.vertexGroupDataSections[i].size();
 	}
 }
 
@@ -121,8 +121,8 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 	mesh.meshInfoSection.unknown1[1] = 0; //
 	mesh.meshInfoSection.unknown1[2] = 0; //
 	mesh.meshInfoSection.unknown1[3] = 0; //
-	mesh.meshInfoSection.boneCount = 0; //
-	mesh.meshInfoSection.boneSectionSize = 0; // 
+	mesh.meshInfoSection.boneCount = 1; //
+	mesh.meshInfoSection.boneSectionSize = 40; // exactly one bone
 
 	for(int i = 0; i < mesh.meshInfoSection.lodGroupCount; ++i)
 		mesh.meshInfoSection.lodGroupIDs.push_back(i);
@@ -136,6 +136,7 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 		mesh.meshInfoSection.lodInfos.push_back(MeshInfoSection::LodInfo{});
 		mesh.meshInfoSection.lodInfos[i].faceDataSize = mesh.meshDataSection.faceDataSections[i].size();
 		mesh.meshInfoSection.lodInfos[i].vertexDataSize = mesh.meshDataSection.vertexDataSections[i].size();
+		mesh.meshInfoSection.lodInfos[i].vertexGroupDataSize = mesh.meshDataSection.vertexGroupDataSections[i].size();
 		mesh.meshInfoSection.lodInfos[i].meshCount = mesh.meshInfoSection.meshCount; // Just assign all meshes to the only LOD available
 		for (int j = 0; j < 16; ++j) {
 			mesh.meshInfoSection.lodInfos[i].faceCount[j] = mesh.meshDataSection.faceDataSections[i].size() / 6;
@@ -154,7 +155,7 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 			is.vertexGroupsOffset = 0;
 			is.verticesCount = mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter].size();
 			is.faceIndicesCount = mesh.lodContainers[lodCounter].meshFaceContainers[meshCounter].size() * 3;
-			is.vertexGroupsCount = 0;
+			is.vertexGroupsCount = mesh.lodContainers[lodCounter].meshVertexGroupContainers[meshCounter].size();
 			is.unknown7 = 0x3F000000;
 			is.unknown8 = 0x3F000000;
 			is.layerIndex = 0;
@@ -172,6 +173,9 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 
 				is.faceIndicesOffset = mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].faceIndicesOffset;
 				is.faceIndicesOffset += mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].faceIndicesCount;
+
+				is.vertexGroupsOffset = mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].vertexGroupsOffset;
+				is.vertexGroupsOffset += mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].vertexGroupsCount;
 			}
 			global_mesh_counter++;
 		}
@@ -207,8 +211,17 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 	vBL.attributesLayouts.push_back({ Buffer::Buffer_0, Type::VECTOR4U8, Attribute::WEIGHT, Channel::Channel_0});
 	vBL.attributesLayouts.push_back({ Buffer::Buffer_0, Type::VECTOR4U8, Attribute::VERTEXGROUP, Channel::Channel_0});
 
+	// one default bone
 	mesh.meshInfoSection.boneSection.sectionID = 0x93D9A424;
-	// No bones...
+	Bone bone;
+	bone.boneID = 0x4179E86A;
+	bone.parentIndex = -1;
+	bone.childCount = 0;
+	bone.translation = { 0.f, 0.f, 0.f };
+	bone.rotation = { 1.f, 0.f, 0.f, 0.f };
+	bone.scale = 1;
+	mesh.meshInfoSection.boneSection.bones.push_back(bone);
+	
 }
 
 void lodContainers_to_internal(PARSER::Mesh& mesh) {
@@ -401,7 +414,10 @@ void lodContainers_to_internal(PARSER::Mesh& mesh) {
 	// Again here just allocate. Guarantees that there are no invalid reads
 	for (int lodCounter = 0; lodCounter < mesh.lodContainers.size(); ++lodCounter) {
 		mesh.meshDataSection.vertexGroupDataSections.push_back(std::vector<byte>{});
+		mesh.meshDataSection.vertexGroupDataSections[lodCounter].push_back(0);
 	}
+	
+
 	mesh.meshDataSection.sectionID = 0x95DBDB69;
 	edit_mesh_info_section(mesh);
 	edit_mesh_desc_section(mesh);
@@ -492,6 +508,7 @@ void assimp_to_lodContainers(PARSER::Mesh& mesh) {
 			}
 			// To allocate the memory, even if its empty. Otherwise we will run into issues later when accessing the data section
 			mesh.lodContainers[lodCounter].meshVertexGroupContainers.push_back(std::vector<byte>{});
+			mesh.lodContainers[lodCounter].meshVertexGroupContainers[meshCounter].push_back(0);
 			assimp_mesh_counter++;
 		}	
 	}

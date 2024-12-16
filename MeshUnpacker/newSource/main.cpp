@@ -13,11 +13,11 @@ int main() {
 	//
 	//Parser::Export(mesh, "F:\\final.fbx", "fbx");
 
-	//auto mesh = Parser::Import("F:\\out.fbx");
-	//
+	//auto mesh = Parser::Import("F:\\untitled.fbx");
+	
 	//Parser::Export(mesh, "F:\\out.mesh", "mesh");
 
 	auto mesh = Parser::Import("F:\\out.mesh");
-
+	
 	Parser::Export(mesh, "F:\\test.fbx", "fbx");
 }
