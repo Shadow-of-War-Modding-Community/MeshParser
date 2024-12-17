@@ -167,8 +167,6 @@ void edit_mesh_info_section(PARSER::Mesh& mesh) {
 				//}
 				is.dataOffset = mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].dataOffset;
 				is.dataOffset += mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter - 1].size() * mesh.bufferLayouts[0].size;
-				is.dataOffset += mesh.lodContainers[lodCounter].meshFaceContainers[meshCounter - 1].size() * sizeof(Face);
-				is.dataOffset += mesh.lodContainers[lodCounter].meshVertexGroupContainers[meshCounter - 1].size();
 
 				is.verticesOffset = mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].verticesOffset;
 				is.verticesOffset += mesh.meshInfoSection.meshInfos[global_mesh_counter - 1].verticesCount;
@@ -457,36 +455,53 @@ void assimp_to_lodContainers(PARSER::Mesh& mesh, PARSER::Mesh& reference_mesh) {
 		error("Scene and reference mesh count dont match!");
 	}
 
+	// Apply the transformations of the objects in the scene to the actual vertex positions
 	applyNodeTransform(mesh.assimp_scene->mRootNode, aiMatrix4x4(), mesh.assimp_scene);
 
-	int lodCount = mesh.meshInfoSection.lodCount; // For now it allows only ONE LOD
+	int lodCount = mesh.meshInfoSection.lodCount;
+	
+	// Sort the meshes by name (000, 001, 002) so the lods are correct
+	std::vector<std::string> mesh_names;
+
+	for (int i = 0; i < mesh.assimp_scene->mNumMeshes; ++i) {
+		mesh_names.push_back(mesh.assimp_scene->mMeshes[i]->mName.C_Str());
+	}
+	std::vector<int> mesh_indices(mesh_names.size());
+	for (size_t i = 0; i < mesh_names.size(); ++i) {
+		mesh_indices[i] = i;
+	}
+
+	std::sort(mesh_indices.begin(), mesh_indices.end(), [&mesh_names](int a, int b) {
+		return mesh_names[a] < mesh_names[b];
+	});
 
 	// Populate the lod buffers with the data from the assimp scene
 	int assimp_mesh_counter = 0;
 	for (int lodCounter = 0; lodCounter < lodCount; ++lodCounter) {
 		mesh.lodContainers.push_back(LODContainer{});
-		error_checks(mesh.assimp_scene->mMeshes[assimp_mesh_counter]);
+		aiMesh* aiMesh = mesh.assimp_scene->mMeshes[mesh_indices[assimp_mesh_counter]];
+		error_checks(aiMesh);
 		int meshCount = mesh.meshInfoSection.lodInfos[lodCounter].meshCount;
 		for (int meshCounter = 0; meshCounter < meshCount; ++meshCounter) {
 			mesh.lodContainers[lodCounter].meshVertexAttributeContainers.push_back(std::vector<VertexAttribute>{});
-			for (int vertexAttributeCounter = 0; vertexAttributeCounter < mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNumVertices; ++vertexAttributeCounter) {
+			for (int vertexAttributeCounter = 0; vertexAttributeCounter < aiMesh->mNumVertices; ++vertexAttributeCounter) {
 				VertexAttribute vertexAttribute;
-				vertexAttribute.position.x = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mVertices[vertexAttributeCounter].x;
-				vertexAttribute.position.y = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mVertices[vertexAttributeCounter].y;
-				vertexAttribute.position.z = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mVertices[vertexAttributeCounter].z;
+				vertexAttribute.position.x = aiMesh->mVertices[vertexAttributeCounter].x;
+				vertexAttribute.position.y = aiMesh->mVertices[vertexAttributeCounter].y;
+				vertexAttribute.position.z = aiMesh->mVertices[vertexAttributeCounter].z;
 				vertexAttribute.position.w = 1.0f;
 
-				vertexAttribute.normal.x = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNormals[vertexAttributeCounter].x;
-				vertexAttribute.normal.y = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNormals[vertexAttributeCounter].y;
-				vertexAttribute.normal.z = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNormals[vertexAttributeCounter].z;
+				vertexAttribute.normal.x = aiMesh->mNormals[vertexAttributeCounter].x;
+				vertexAttribute.normal.y = aiMesh->mNormals[vertexAttributeCounter].y;
+				vertexAttribute.normal.z = aiMesh->mNormals[vertexAttributeCounter].z;
 
-				vertexAttribute.tangent.x = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mTangents[vertexAttributeCounter].x;
-				vertexAttribute.tangent.y = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mTangents[vertexAttributeCounter].y;
-				vertexAttribute.tangent.z = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mTangents[vertexAttributeCounter].z;
+				vertexAttribute.tangent.x = aiMesh->mTangents[vertexAttributeCounter].x;
+				vertexAttribute.tangent.y = aiMesh->mTangents[vertexAttributeCounter].y;
+				vertexAttribute.tangent.z = aiMesh->mTangents[vertexAttributeCounter].z;
 				
-				vertexAttribute.bitangent.x = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mBitangents[vertexAttributeCounter].x;
-				vertexAttribute.bitangent.y = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mBitangents[vertexAttributeCounter].y;
-				vertexAttribute.bitangent.z = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mBitangents[vertexAttributeCounter].z;
+				vertexAttribute.bitangent.x = aiMesh->mBitangents[vertexAttributeCounter].x;
+				vertexAttribute.bitangent.y = aiMesh->mBitangents[vertexAttributeCounter].y;
+				vertexAttribute.bitangent.z = aiMesh->mBitangents[vertexAttributeCounter].z;
 
 				vertexAttribute.weights.weight1 = 0;
 				vertexAttribute.weights.weight2 = 0;
@@ -503,24 +518,24 @@ void assimp_to_lodContainers(PARSER::Mesh& mesh, PARSER::Mesh& reference_mesh) {
 				vertexAttribute.color.b = 255;
 				vertexAttribute.color.a = 255;
 
-				for (int i = 0; i < mesh.assimp_scene->mMeshes[assimp_mesh_counter]->GetNumUVChannels(); ++i) {
+				for (int i = 0; i < aiMesh->GetNumUVChannels(); ++i) {
 					// Assuming that the fbx will use floats instead of those fucking shorts...
 					UV tmpUV;
-					tmpUV.u = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mTextureCoords[i][vertexAttributeCounter].x;
-					tmpUV.v = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mTextureCoords[i][vertexAttributeCounter].y;
+					tmpUV.u = aiMesh->mTextureCoords[i][vertexAttributeCounter].x;
+					tmpUV.v = aiMesh->mTextureCoords[i][vertexAttributeCounter].y;
 					vertexAttribute.uvs.push_back(std::make_pair(tmpUV, false)); // false = float
 				}
 				mesh.lodContainers[lodCounter].meshVertexAttributeContainers[meshCounter].push_back(vertexAttribute);
 			}
 			mesh.lodContainers[lodCounter].meshFaceContainers.push_back(std::vector<Face>{});
-			for (int faceCounter = 0; faceCounter < mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mNumFaces; ++faceCounter) {
+			for (int faceCounter = 0; faceCounter < aiMesh->mNumFaces; ++faceCounter) {
 				Face face;
-				if (mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mNumIndices != 3) {
+				if (aiMesh->mFaces[faceCounter].mNumIndices != 3) {
 					error("Faces are not triangulated! This shouldn't happen");
 				}
-				face.index1 = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[0];
-				face.index2 = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[1];
-				face.index3 = mesh.assimp_scene->mMeshes[assimp_mesh_counter]->mFaces[faceCounter].mIndices[2];
+				face.index1 = aiMesh->mFaces[faceCounter].mIndices[0];
+				face.index2 = aiMesh->mFaces[faceCounter].mIndices[1];
+				face.index3 = aiMesh->mFaces[faceCounter].mIndices[2];
 				mesh.lodContainers[lodCounter].meshFaceContainers[meshCounter].push_back(face);
 			}
 			// To allocate the memory, even if its empty. Otherwise we will run into issues later when accessing the data section
