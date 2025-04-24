@@ -8,6 +8,12 @@
 #include <memory>
 #include "half.h"
 
+// Remove this includes if you only want to test the unpacker without assimp dependencies!
+#include <assimp/Exporter.hpp>
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+
 namespace MESH_UNPACKER {
 #define read_ulong(dst, hndl) hndl.read((char*)&dst, sizeof(ulong))
 #define error(msg) MessageBoxA(NULL, msg, "MeshLoader-ERROR", MB_ICONERROR);\
@@ -27,26 +33,28 @@ exit(-1)
 			}
 		}
 
-		namespace MESH {
-			namespace TYPES {
-				struct Vector3f {
-					float x, y, z;
-				};
-				
-				using Normal = Vector3f;
-				using Tangent = Vector3f;
-				using Bitangent = Vector3f;
+		namespace GLOBALTYPES {
+			struct Vector3f {
+				float x, y, z;
+			};
 
-				struct Quaternion {
-					float w, x, y, z;
-				};
+			struct Quaternion {
+				float w, x, y, z;
+			};
+		}
+
+		namespace MESH {
+			namespace TYPES {							
+				using Normal = GLOBALTYPES::Vector3f;
+				using Tangent = GLOBALTYPES::Vector3f;
+				using Bitangent = GLOBALTYPES::Vector3f;
 
 				struct Bone {
 					ulong boneID;
 					short parentIndex;
 					ushort childCount;
-					Vector3f translation;
-					Quaternion rotation;
+					GLOBALTYPES::Vector3f translation;
+					GLOBALTYPES::Quaternion rotation;
 					float scale;
 				};
 
@@ -59,14 +67,14 @@ exit(-1)
 				};
 
 				union Weights{
-					byte weight[4];
+					byte weights[4];
 					struct {
 						byte weight1, weight2, weight3, weight4;
 					};
 				};
 
 				union VertexGroups{
-					byte vertexGroupIndex[4];
+					byte vertexGroupIndices[4];
 					struct {
 						byte vertexGroupIndex1, vertexGroupIndex2, vertexGroupIndex3, vertexGroupIndex4;
 					};
@@ -84,7 +92,7 @@ exit(-1)
 					Position32 position;
 					Weights weights;
 					VertexGroups vertexGroups;
-					UV uv;
+					std::vector<std::pair<UV, bool>> uvs; // true = short, false = float
 					Normal normal;
 					Tangent tangent;
 					Bitangent bitangent;
@@ -103,13 +111,14 @@ exit(-1)
 				struct Bone {
 					ulong boneNameOffset;
 					bool boneActive;
-					float c21, c22, c23, c11, c12, c13, c14;
+					GLOBALTYPES::Vector3f translation;
+					GLOBALTYPES::Quaternion rotation;
 					ulong childCount;
 					std::string boneName;
 
-					void populate(std::ifstream& skel, std::string& name) {
-						skel.read((char*)this, 40);
-						boneName = name;
+					// The boneName has to be populated separately!!!
+					void populate(std::ifstream& skel) {
+						skel.read((char*)this, 37); 
 					}
 				};
 #pragma pack(pop)
@@ -119,5 +128,5 @@ exit(-1)
 }
 
 
-#include "Mesh/mesh.h"
 #include "Skel/skel.h"
+#include "Mesh/mesh.h"

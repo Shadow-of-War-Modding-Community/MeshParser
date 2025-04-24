@@ -69,11 +69,16 @@ namespace MESH_UNPACKER::INTERNAL::SKEL {
 	struct BoneSection {
 		ulong sectionID; // 0xDCDCFF00
 
-		std::vector<std::string> boneNames;
+		std::vector<char> boneNameBuffer;
 
 		TYPES::Bone* bones = nullptr;
 
 		void populate(std::ifstream&, Header&);
+	};
+
+	struct Skeleton {
+		Header header{};
+		BoneSection boneSection{};
 	};
 }
 	
