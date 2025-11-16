@@ -513,10 +513,20 @@ void assimp_to_lodContainers(PARSER::Mesh& mesh, PARSER::Mesh& reference_mesh) {
 				vertexAttribute.vertexGroups.vertexGroupIndex3 = 0;
 				vertexAttribute.vertexGroups.vertexGroupIndex4 = 0;
 
-				vertexAttribute.color.r = aiMesh->mColors[0][vertexAttributeCounter].r * 255;
-				vertexAttribute.color.g = aiMesh->mColors[0][vertexAttributeCounter].g * 255;
-				vertexAttribute.color.b = aiMesh->mColors[0][vertexAttributeCounter].b * 255;
-				vertexAttribute.color.a = aiMesh->mColors[0][vertexAttributeCounter].a * 255;
+				if (aiMesh->HasVertexColors(0))
+				{
+					vertexAttribute.color.r = aiMesh->mColors[0][vertexAttributeCounter].r * 255;
+					vertexAttribute.color.g = aiMesh->mColors[0][vertexAttributeCounter].g * 255;
+					vertexAttribute.color.b = aiMesh->mColors[0][vertexAttributeCounter].b * 255;
+					vertexAttribute.color.a = aiMesh->mColors[0][vertexAttributeCounter].a * 255;
+				}
+				else
+				{
+					vertexAttribute.color.r = 255;
+					vertexAttribute.color.g = 255;
+					vertexAttribute.color.b = 255;
+					vertexAttribute.color.a = 255;
+				}
 
 				for (int i = 0; i < aiMesh->GetNumUVChannels(); ++i) {
 					// Assuming that the fbx will use floats instead of those fucking shorts...
